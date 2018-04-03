@@ -22,7 +22,7 @@ int main() {
 	std::thread t(&ReceptionThread, &end, &incomingInfo, socket);
 
 	infoToSend << "HELLO_";
-	status = socket->send(infoToSend, serverIP, serverPort);
+	status = socket->send(infoToSend, "localhost", 50000);
 	if (status != sf::Socket::Done) {
 		std::cout << "El mensaje no se ha podido enviar correctamente" << std::endl;
 	}
@@ -77,10 +77,9 @@ void ReceptionThread(bool* end, std::queue<sf::Packet>* incomingInfo, sf::UdpSoc
 		sf::IpAddress incomingIP;
 		unsigned short incomingPort;
 		status = socket->receive(inc, incomingIP, incomingPort);
-		if (status != sf::Socket::Done) {
+		if (status == sf::Socket::Error) {
 			std::cout << "Error al recibir informacion" << std::endl;
-		}
-		else {
+		}else {
 			std::cout << "Paquete recibido correctamente" << std::endl;
 			incomingInfo->push(inc);
 			//incomingInfo >> command;

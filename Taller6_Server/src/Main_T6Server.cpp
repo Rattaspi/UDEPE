@@ -2,6 +2,7 @@
 #include <queue>
 #include <thread>
 #include <Event.h>
+#include <random>
 
 void ReceptionThread(bool* end, std::queue<Event*>* incomingInfo, sf::UdpSocket* socket);
 
@@ -41,6 +42,10 @@ int main() {
 					remoteIP = infoReceived.GetAdress();
 					remotePort = infoReceived.GetPort();
 					std::cout << "Conexion aceptada " << remoteIP << ":" << remotePort << std::endl;
+					//EL CLIENTE NECESITA UN PAIR QUE SERA LA POSICION X Y EN EL MAPA
+					//ESTA POSICIÓN TAMBIÉN SE LA TENEMOS QUE PASAR AL CLIENTE
+					//ANTES DE CREAR EL CLIENTE TENEMOS QUE CONTROLAR QUE ESTE YA NO EXISTA COMPARANDO IP:PUERTO DE ACLIENTS
+					//std::pair<float, float> position(sf::);
 					aClients.push_back(Client(remoteIP.toString(), remotePort, clientID));
 					infoToSend << "WELCOME_" << clientID;
 					socket->send(infoToSend, remoteIP, remotePort);

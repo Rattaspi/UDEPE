@@ -89,7 +89,7 @@ public:
 		criticalPacketID+=1;
 		mut.unlock();
 		
-		std::cout << "CriticalPacket incrementado a" << criticalPacketID<<"\n";
+		//std::cout << "CriticalPacket incrementado a" << criticalPacketID<<"\n";
 
 
 	}
@@ -97,13 +97,15 @@ public:
 		//se itera todo el vector de paquetes y se envian todos a la ip y puerto de este cliente
 		sf::Socket::Status status;
 		for (int i = 0; i < criticalVector.size(); i++) {
-			status = socket->send(criticalVector[i].GetPacket(), ip, port);
+			do {
+				status = socket->send(criticalVector[i].GetPacket(), ip, port);
+			} while (status == sf::Socket::Partial);
 
 			if (status == sf::Socket::Status::Error) {
 				std::cout << "Error enviando packet critico\n";
 			}
 			else if (status == sf::Socket::Status::Done) {
-				std::cout << "Packet critico enviado\n";
+				//std::cout << "Packet critico enviado\n";
 			}
 		}
 	}
@@ -120,7 +122,7 @@ public:
 
 		if (actualIndex != -1){
 			criticalVector.erase(criticalVector.begin() + actualIndex);
-			std::cout << "CriticalPacket en posicion " << actualIndex << " borrado con exito\n";
+			//std::cout << "CriticalPacket en posicion " << actualIndex << " borrado con exito\n";
 		}
 
 	}

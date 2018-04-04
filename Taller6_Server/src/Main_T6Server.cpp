@@ -63,9 +63,12 @@ int main() {
 								infoToSend << aClients.at(j)->GetPosition().first;
 								infoToSend << aClients.at(j)->GetPosition().second;
 							}
-
-							socket->send(infoToSend, remoteIP, remotePort);
-
+							do {
+								status = socket->send(infoToSend, remoteIP, remotePort);
+							} while (status == sf::Socket::Partial);
+							if (status != sf::Socket::Done) {
+								std::cout << "El mensaje no se ha podido mandar correctamente\n";
+							}
 							std::cout << "Se reenvia un welcome a " << remoteIP << ":" << remotePort << std::endl;
 
 						}
@@ -111,7 +114,12 @@ int main() {
 							infoToSend << aClients.at(j)->GetPosition().second;
 						}
 
-						socket->send(infoToSend, remoteIP, remotePort);
+						do {
+							status = socket->send(infoToSend, remoteIP, remotePort);
+						} while (status == sf::Socket::Partial);
+						if (status != sf::Socket::Done) {
+							std::cout << "El mensaje no se ha podido mandar correctamente\n";
+						}
 
 						//CriticalPacket aCritical(infoToSend, aClients[aClients.size() - 1]->GetCriticalId());
 
@@ -161,7 +169,8 @@ int main() {
 		}
 
 		for (int i = 0; i < aClients.size(); i++) {
-			if (aClients[i]->pingCounter.getElapsedTime().asMilliseconds() > 5001) {
+			if (aClients[i]->pingCounter.getElapsedTime().asMilliseconds() > 5000) {
+				std::cout << "CLIENTE NUMERO " << aClients[i]->GetID()<<" DESCONECTADO";
 				DisconnectPlayer(&aClients, aClients[i]);
 			}
 		}
@@ -190,7 +199,7 @@ void ReceptionThread(bool* end, std::queue<Event*>* incomingInfo, sf::UdpSocket*
 			std::cout << "Error al recibir informacion" << std::endl;
 		}
 		else if (status == sf::Socket::Done) {
-			std::cout << "Paquete recibido correctamente" << std::endl;
+			//std::cout << "Paquete recibido correctamente" << std::endl;
 			incomingInfo->push(new Event(inc,incomingIP, incomingPort));
 
 		}
@@ -215,12 +224,14 @@ void PingThread(bool* end, std::vector<ServerClient*>* aClients, sf::UdpSocket* 
 		}
 		for (int i = 0; i < aClients->size(); i++) {
 			sf::Socket::Status status;
-			status = socket->send(sendPacket, aClients->at(i)->GetIP(), aClients->at(i)->GetPort());
+			do {
+				status = socket->send(sendPacket, aClients->at(i)->GetIP(), aClients->at(i)->GetPort());
+			} while (status == sf::Socket::Partial);
 			if (status == sf::Socket::Status::Error) {
-				std::cout << "Error enviando packet de Ping\n";
+				//std::cout << "Error enviando packet de Ping\n";
 			}
 			else if (status == sf::Socket::Status::Done) {
-				std::cout << "Ping enviado\n";
+				//std::cout << "Ping enviado\n";
 			}
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -231,15 +242,16 @@ void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClien
 	int whoLeaves = aClient->GetID();
 	bool deleted = false;
 	int index = 0;
+	std::cout << "SIZE ANTES DE ELIMINAR " << aClients->size() << std::endl;
 	do {
 		if (aClients->at(index)->GetID() == whoLeaves) {
 			deleted = true;
 			delete aClients->at(index);
 			aClients->erase(aClients->begin() + index);
 		}
-
+		index++;
 	} while (!deleted);
-
+	std::cout << "SIZE DESPUES DE ELIMINAR " << aClients->size() << std::endl;
 	for (int i = 0; i < aClients->size(); i++) {
 		sf::Packet leaverPacket;
 		leaverPacket << "CRITICAL_";

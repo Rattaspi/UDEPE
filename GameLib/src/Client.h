@@ -97,8 +97,9 @@ public:
 		//se itera todo el vector de paquetes y se envian todos a la ip y puerto de este cliente
 		sf::Socket::Status status;
 		for (int i = 0; i < criticalVector.size(); i++) {
+			sf::Packet sendThisFFS = criticalVector[i].GetPacket();//en el send no me dejaba llamar directamente al GetPacket por eso lo hago antes
 			do {
-				status = socket->send(criticalVector[i].GetPacket(), ip, port);
+				status = socket->send(sendThisFFS, ip, port);
 			} while (status == sf::Socket::Partial);
 
 			if (status == sf::Socket::Status::Error) {

@@ -194,19 +194,15 @@ void ReceptionThread(bool* end, std::queue<Event*>* incomingInfo, sf::UdpSocket*
 		sf::IpAddress incomingIP;
 		unsigned short incomingPort;
 		status = socket->receive(inc, incomingIP, incomingPort);
-
-		if (status == sf::Socket::Error) {
-			std::cout << "Error al recibir informacion" << std::endl;
-		}
-		else if (status == sf::Socket::Done) {
-			//std::cout << "Paquete recibido correctamente" << std::endl;
-			incomingInfo->push(new Event(inc,incomingIP, incomingPort));
-
-		}
-		else if (status != sf::Socket::NotReady) {
-			do {
-				status = socket->receive(inc, incomingIP, incomingPort);
-			} while (status == sf::Socket::Partial);
+		
+		if (status != sf::Socket::NotReady) {
+			if (status == sf::Socket::Error) {
+				std::cout << "Error al recibir informacion" << std::endl;
+			}
+			else if (status == sf::Socket::Done) {
+				std::cout << "Paquete recibido correctamente" << std::endl;
+				incomingInfo->push(new Event(inc, incomingIP, incomingPort));
+			}
 		}
 	}
 }

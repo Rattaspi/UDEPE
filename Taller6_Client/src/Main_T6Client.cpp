@@ -47,8 +47,9 @@ int main() {
 		if (clock.getElapsedTime().asMilliseconds() > 500 && !connected) {
 			infoToSend.clear();
 			infoToSend << "HELLO_";
-			status = socket->send(infoToSend, serverIp, serverPort);
-
+			do {
+				status = socket->send(infoToSend, serverIp, serverPort);
+			} while (status == sf::Socket::Partial);
 			if (status != sf::Socket::Done) {
 				std::cout << "El mensaje no se ha podido enviar correctamente" << std::endl;
 			}
@@ -119,9 +120,9 @@ int main() {
 				sf::Packet ackPacket;
 				ackPacket << "ACKPING_";
 				ackPacket << myID;
-
-				status = socket->send(ackPacket, serverIp, serverPort);
-
+				do {
+					status = socket->send(ackPacket, serverIp, serverPort);
+				} while (status == sf::Socket::Partial);
 				if (status == sf::Socket::Error) {
 					//std::cout << "Error enviando ACKPING\n";
 				}
@@ -225,17 +226,14 @@ void ReceptionThread(bool* end, std::queue<sf::Packet>* incomingInfo, sf::UdpSoc
 		sf::IpAddress incomingIP;
 		unsigned short incomingPort;
 		status = socket->receive(inc, incomingIP, incomingPort);
-		if (status == sf::Socket::Error) {
-			std::cout << "Error al recibir informacion" << std::endl;
-		}
-		else if(status == sf::Socket::Done){
-			//std::cout << "Paquete recibido correctamente" << std::endl;
-			incomingInfo->push(inc);
-		}
-		else if (status != sf::Socket::NotReady) {
-			do {
-				status = socket->receive(inc, incomingIP, incomingPort);
-			} while (status == sf::Socket::Partial);
+		if (status != sf::Socket::NotReady) {
+			if (status == sf::Socket::Error) {
+				std::cout << "Error al recibir informacion" << std::endl;
+			}
+			else if (status == sf::Socket::Done) {
+				std::cout << "Paquete recibido correctamente" << std::endl;
+				incomingInfo->push(inc);
+			}
 		}
 	}
 }

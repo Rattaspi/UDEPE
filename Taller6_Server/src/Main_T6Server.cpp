@@ -127,15 +127,15 @@ int main() {
 
 					int receivedCriticalID, receivedCriticalPlayerID;
 					infoReceived.packet >> receivedCriticalPlayerID;
-					 infoReceived.packet >> receivedCriticalID;
+					infoReceived.packet >> receivedCriticalID;
 					 
-					 ServerClient* aClient = nullptr;
+					ServerClient* aClient = nullptr;
 
-					  aClient = GetClientWithId(receivedCriticalPlayerID, &aClients);
+					aClient = GetClientWithId(receivedCriticalPlayerID, &aClients);
 
-					  if (aClient != nullptr) {
-						  aClient->RemoveCriticalPacket(receivedCriticalID);
-					  }
+					if (aClient != nullptr) {
+						aClient->RemoveCriticalPacket(receivedCriticalID);
+					}
 
 				}
 				else if (command == "ACKPING_") {

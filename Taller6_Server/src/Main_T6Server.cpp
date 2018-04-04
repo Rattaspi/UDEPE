@@ -179,6 +179,7 @@ int main() {
 
 void ReceptionThread(bool* end, std::queue<Event*>* incomingInfo, sf::UdpSocket* socket) {
 	sf::Socket::Status status;
+	socket->setBlocking(false);
 	while (!*end) {
 		sf::Packet inc;
 		sf::IpAddress incomingIP;
@@ -188,10 +189,15 @@ void ReceptionThread(bool* end, std::queue<Event*>* incomingInfo, sf::UdpSocket*
 		if (status == sf::Socket::Error) {
 			std::cout << "Error al recibir informacion" << std::endl;
 		}
-		else {
+		else if (status == sf::Socket::Done) {
 			std::cout << "Paquete recibido correctamente" << std::endl;
 			incomingInfo->push(new Event(inc,incomingIP, incomingPort));
 
+		}
+		else if (status != sf::Socket::NotReady) {
+			do {
+				status = socket->receive(inc, incomingIP, incomingPort);
+			} while (status == sf::Socket::Partial);
 		}
 	}
 }

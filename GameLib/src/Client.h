@@ -4,6 +4,7 @@
 #include <SFML\Network.hpp>
 #include <mutex>
 
+#define LOSSRATE 90;
 
 //CLASE PARA TENER EL PAQUETE RELACIONADO CON UN ID
 class CriticalPacket {
@@ -96,14 +97,21 @@ public:
 	void SendAllCriticalPackets(sf::UdpSocket* socket) {
 		//se itera todo el vector de paquetes y se envian todos a la ip y puerto de este cliente
 		sf::Socket::Status status;
+		int lossRate = LOSSRATE;
 		for (int i = 0; i < criticalVector.size(); i++) {
-			status = socket->send(criticalVector[i].GetPacket(), ip, port);
-
-			if (status == sf::Socket::Status::Error) {
-				std::cout << "Error enviando packet critico\n";
+			if ((int)(rand() % 100) < lossRate) {
+				std::cout << "PAQUETE CRITICO PERDIDO\n";
 			}
-			else if (status == sf::Socket::Status::Done) {
-				std::cout << "Packet critico enviado\n";
+			else {
+				sf::Packet send = criticalVector[i].GetPacket(); //hay que recoger el packet antes porque al poner la funcion GetPacket dentro del send da error
+				status = socket->send(send, ip, port);
+
+				if (status == sf::Socket::Status::Error) {
+					std::cout << "Error enviando packet critico\n";
+				}
+				else if (status == sf::Socket::Status::Done) {
+					std::cout << "PAQUETE CRITICO ENVIADO CORRECTAMENTE\n";
+				}
 			}
 		}
 	}

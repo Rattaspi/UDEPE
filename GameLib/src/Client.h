@@ -2,22 +2,27 @@
 #include <iostream>
 #include <vector>
 #include <SFML\Network.hpp>
+#include "OutputMemoryBitStream.h"
 #include <mutex>
 
-#define LOSSRATE 90;
+#define LOSSRATE 50;
 
 //CLASE PARA TENER EL PAQUETE RELACIONADO CON UN ID
 class CriticalPacket {
 private:
-	sf::Packet packet;
+	//sf::Packet packet;
+	//OutputMemoryBitStream ombs;
+
+
 	int id;
 public:
-	CriticalPacket(sf::Packet packet, int id) {
-		this->packet = packet;
+	char* message;
+	uint32_t messageSize;
+	CriticalPacket(/*OutputMemoryBitStream ombs*/char* message, uint32_t messageSize, int id) {
+		//this->ombs = ombs;
 		this->id = id;
-	}
-	sf::Packet GetPacket() {
-		return packet;
+		this->message = message;
+		this->messageSize = messageSize;
 	}
 	int GetID() {
 		return id;
@@ -29,7 +34,7 @@ public:
 	std::pair<float, float> position;
 	unsigned int id;
 	Client() {
-
+		id = 0;
 	}
 
 	Client(unsigned int id) {
@@ -48,7 +53,7 @@ private:
 	unsigned short port;
 	std::string ip;
 	std::vector<CriticalPacket> criticalVector; //POR ALGUNA RAZON NO PUEDO ACCEDER A ESTE VECTOR
-	int criticalPacketID; //para llevar track del id de los mensajes criticos
+	int8_t criticalPacketID; //para llevar track del id de los mensajes criticos
 public:
 	sf::Clock pingCounter;
 	ServerClient(std::string ip, unsigned short port, unsigned int id, std::pair<float,float> position) {
@@ -103,8 +108,8 @@ public:
 				std::cout << "PAQUETE CRITICO PERDIDO\n";
 			}
 			else {
-				sf::Packet send = criticalVector[i].GetPacket(); //hay que recoger el packet antes porque al poner la funcion GetPacket dentro del send da error
-				status = socket->send(send, ip, port);
+				//OutputMemoryBitStream ombs = criticalVector[i].GetPacket(); //hay que recoger el packet antes porque al poner la funcion GetPacket dentro del send da error
+				status = socket->send(criticalVector[i].message, criticalVector[i].messageSize, ip, port);
 
 				if (status == sf::Socket::Status::Error) {
 					std::cout << "Error enviando packet critico\n";

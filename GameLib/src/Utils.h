@@ -1,5 +1,14 @@
 #pragma once
 #include "Client.h"
+#include "OutputMemoryBitStream.h"
+#include "InputMemoryBitStream.h"
+
+enum PacketType {HELLO, WELCOME, NEWPLAYER, DISCONNECT, ACK, PING, ACKPING, INPUT, SHOOT, GAMEOVER, GAMESTART, GOAL, NOTWELCOME, MOVE, MOVEBALL};
+const int8_t commandBits = 4;
+const int maxBufferSize = 300;
+const int playerSizeBits = 2;
+const int coordsbits = 100;
+const int criticalBits=8;
 
 ServerClient* GetClientWithId(int id, std::vector<ServerClient*>*aClients) {
 

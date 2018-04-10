@@ -21,6 +21,11 @@ public:
 	sf::IpAddress GetAdress() {
 		return adress;
 	}
+
+	std::string GetAddressAsString() {
+		return adress.toString();
+	}
+
 	unsigned short GetPort() {
 		return port;
 	}

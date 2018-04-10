@@ -4,11 +4,20 @@
 #include "InputMemoryBitStream.h"
 
 enum PacketType {HELLO, WELCOME, NEWPLAYER, DISCONNECT, ACK, PING, ACKPING, INPUT, SHOOT, GAMEOVER, GAMESTART, GOAL, NOTWELCOME, MOVE, MOVEBALL};
-const int8_t commandBits = 4;
-const int maxBufferSize = 300;
-const int playerSizeBits = 2;
-const int coordsbits = 100;
+const int commandBits = 4;
+const int maxBufferSize = 1300;
+const int playerSizeBits = 3;
+const int coordsbits = 10;
 const int criticalBits=8;
+
+ServerClient* GetClientWithIpPort(unsigned short port, std::string ip, std::vector<ServerClient*>*aClients) {
+	for (int i = 0; i < aClients->size(); i++) {
+		if (aClients->at(i)->GetIP() == ip&&aClients->at(i)->GetPort() == port) {
+			return aClients->at(i);
+		}
+	}
+	return nullptr;
+}
 
 ServerClient* GetClientWithId(int id, std::vector<ServerClient*>*aClients) {
 

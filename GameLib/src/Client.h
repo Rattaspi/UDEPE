@@ -5,7 +5,7 @@
 #include "OutputMemoryBitStream.h"
 #include <mutex>
 
-#define LOSSRATE 50;
+#define LOSSRATE 0;
 
 //CLASE PARA TENER EL PAQUETE RELACIONADO CON UN ID
 class CriticalPacket {
@@ -14,26 +14,35 @@ private:
 	//OutputMemoryBitStream ombs;
 
 
-	int id;
+	unsigned int id;
 public:
+	OutputMemoryBitStream* ombs;
 	char* message;
 	uint32_t messageSize;
-	CriticalPacket(/*OutputMemoryBitStream ombs*/char* message, uint32_t messageSize, int id) {
+	CriticalPacket(/*OutputMemoryBitStream ombs*/char* message, uint32_t messageSize, unsigned int id) {
 		//this->ombs = ombs;
 		this->id = id;
 		this->message = message;
 		this->messageSize = messageSize;
 	}
-	int GetID() {
+
+	CriticalPacket(OutputMemoryBitStream* ombs, unsigned int id) {
+		this->id = id;
+		this->ombs = ombs;
+	}
+
+	unsigned int GetID() {
 		return id;
 	}
 };
 
 class Client {
 public:
-	std::pair<float, float> position;
+	std::string userName;
+	std::pair<short, short> position;
 	unsigned int id;
 	Client() {
+		userName = "";
 		id = 0;
 	}
 
@@ -41,7 +50,7 @@ public:
 		this->id = id;
 	}
 
-	Client(unsigned int id, std::pair<float, float> position){
+	Client(unsigned int id, std::pair<short, short> position){
 		this->id = id;
 		this->position = position;
 	}
@@ -53,17 +62,17 @@ private:
 	unsigned short port;
 	std::string ip;
 	std::vector<CriticalPacket> criticalVector; //POR ALGUNA RAZON NO PUEDO ACCEDER A ESTE VECTOR
-	int8_t criticalPacketID; //para llevar track del id de los mensajes criticos
+	unsigned int criticalPacketID; //para llevar track del id de los mensajes criticos
 public:
 	sf::Clock pingCounter;
-	ServerClient(std::string ip, unsigned short port, unsigned int id, std::pair<float,float> position) {
+	ServerClient(std::string ip, unsigned short port, unsigned int id, std::pair<short, short> position) {
 		this->ip = ip;
 		this->port = port;
 		this->id = id;
 		this->position = position;
 		criticalPacketID = 0;
 		pingCounter.restart();
-		
+		userName = "Player" + id;
 	}
 
 	unsigned short GetPort() {
@@ -76,11 +85,11 @@ public:
 		return id;
 	}
 
-	int GetCriticalId() {
+	unsigned int GetCriticalId() {
 		return criticalPacketID;
 	}
 
-	std::pair<float, float> GetPosition() {
+	std::pair<short, short> GetPosition() {
 		return position;
 	}
 	//Añade al vector de paquetes criticos un nuevo paquete
@@ -99,28 +108,46 @@ public:
 
 
 	}
+
+	void DebugCriticalPackets() {
+		for (int i = 0; i < criticalVector.size(); i++) {
+			std::cout << "CRITICAL PACKET ID-> " << criticalVector[i].GetID() << std::endl;
+		}
+	}
+
+	bool HasCriticalPackets() {
+		return criticalVector.size() > 0;
+	}
+
 	void SendAllCriticalPackets(sf::UdpSocket* socket) {
 		//se itera todo el vector de paquetes y se envian todos a la ip y puerto de este cliente
 		sf::Socket::Status status;
 		int lossRate = LOSSRATE;
+
+		//DebugCriticalPackets();
+
 		for (int i = 0; i < criticalVector.size(); i++) {
 			if ((int)(rand() % 100) < lossRate) {
 				std::cout << "PAQUETE CRITICO PERDIDO\n";
 			}
 			else {
 				//OutputMemoryBitStream ombs = criticalVector[i].GetPacket(); //hay que recoger el packet antes porque al poner la funcion GetPacket dentro del send da error
-				status = socket->send(criticalVector[i].message, criticalVector[i].messageSize, ip, port);
+				//status = socket->send(criticalVector[i].message, criticalVector[i].messageSize, ip, port);
+				
+				status = socket->send(criticalVector[i].ombs->GetBufferPtr(), criticalVector[i].ombs->GetByteLength(), ip, port);
+
+				//std::cout << "ombsPTR " << criticalVector[i].message << std::endl;
 
 				if (status == sf::Socket::Status::Error) {
 					std::cout << "Error enviando packet critico\n";
 				}
 				else if (status == sf::Socket::Status::Done) {
-					std::cout << "PAQUETE CRITICO ENVIADO CORRECTAMENTE\n";
+					//std::cout << "PAQUETE CRITICO ENVIADO CORRECTAMENTE\n";
 				}
 			}
 		}
 	}
-	void RemoveCriticalPacket(int id) {
+	void RemoveCriticalPacket(unsigned int id) {
 		//se itera todo el vector de paquetes criticos y eliminamos el que tiene el id que le pasamos a esta funcion
 
 		int actualIndex = -1;
@@ -132,6 +159,7 @@ public:
 		}
 
 		if (actualIndex != -1){
+			delete criticalVector[actualIndex].ombs;
 			criticalVector.erase(criticalVector.begin() + actualIndex);
 			std::cout << "CriticalPacket en posicion " << actualIndex << " borrado con exito\n";
 		}

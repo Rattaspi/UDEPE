@@ -19,22 +19,41 @@ ServerClient* GetClientWithIpPort(unsigned short port, std::string ip, std::vect
 	return nullptr;
 }
 
-ServerClient* GetClientWithId(int id, std::vector<ServerClient*>*aClients) {
-
-	for (int i = 0; i < aClients->size(); i++) {
-		if (aClients->at(i)->GetID() == id) {
-			return aClients->at(i);
+Client* GetClientWithId(int id, std::vector<Client*>aClients) {
+	for (int i = 0; i < aClients.size(); i++) {
+		if (aClients[i]->id == id) {
+			return aClients[i];
 		}
 	}
+	return nullptr;
 }
 
-Client* GetClientWithId(int id, std::vector<Client*>*aClients) {
+//ServerClient* GetClientWithId(int id, std::vector<ServerClient*>*aClients) {
+//
+//	for (int i = 0; i < aClients->size(); i++) {
+//		//if (aClients->at(i)->GetID() == id) {
+//		//	return aClients->at(i);
+//		//}
+//	}
+//}
+
+//Client* GetClientWithId(int id, std::vector<Client*>*aClients) {
+//
+//	for (int i = 0; i < aClients->size(); i++) {
+//		if (aClients->at(i)->id == id) {
+//			return aClients->at(i);
+//		}
+//	}
+//}
+
+int GetIndexClientWithId(int id, std::vector<ServerClient*>*aClients) {
 
 	for (int i = 0; i < aClients->size(); i++) {
 		if (aClients->at(i)->id == id) {
-			return aClients->at(i);
+			return i;
 		}
 	}
+	return -1;
 }
 
 int GetIndexClientWithId(int id, std::vector<Client*>*aClients) {

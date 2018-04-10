@@ -17,7 +17,7 @@ int main() {
 	sf::Clock criticalClock;
 	srand(time(NULL));
 	std::cout << "INICIANDO SERVIDOR..." << std::endl;
-	unsigned int clientID = 0;
+	int clientID = 0;
 	std::vector<ServerClient*> aClients;
 	sf::Socket::Status status;
 	sf::UdpSocket* socket = new sf::UdpSocket();
@@ -51,8 +51,7 @@ int main() {
 			sf::Socket::Status status;
 			bool exists = false;
 			ServerClient* aClient;
-			unsigned int aCriticalId = 0;
-
+			int aCriticalId=0;
 			switch (command) {
 			case HELLO:
 
@@ -62,15 +61,14 @@ int main() {
 					}
 				}
 
-
-
-
-
-
 				ombs.Write(PacketType::WELCOME, commandBits);
 				ombs.Write(clientID, playerSizeBits);
-				ombs.Write(((int)aClients.size()) - 1, playerSizeBits);
 
+				for (int i=0; i < 1; i++) {
+					int aClientSizeMinus = aClients.size();
+					aClientSizeMinus--;
+					ombs.Write(aClientSizeMinus, playerSizeBits);
+				}
 				for (int i = 0; i < aClients.size(); i++) {
 					ombs.Write(aClients[i]->GetID(), playerSizeBits);
 					ombs.Write(aClients[i]->GetPosition().first, coordsbits);
@@ -91,20 +89,15 @@ int main() {
 
 						OutputMemoryBitStream* auxOmbs = new OutputMemoryBitStream();
 
-						auxOmbs->Write(PacketType::NEWPLAYER);
-						auxOmbs->Write(aClients[i]->GetCriticalId(), criticalBits);
+						auxOmbs->Write(PacketType::NEWPLAYER,commandBits);
+						auxOmbs->Write(aClients[i]->criticalId, criticalBits);
 						auxOmbs->Write(clientID, playerSizeBits);
-						auxOmbs->Write(coords.first, coordsbits);
+						auxOmbs->Write(coords.first,coordsbits);
 						auxOmbs->Write(coords.second, coordsbits);
 
-						//std::cout << "escribiendo criticalId" << aClients[i]->GetCriticalId() << std::endl;
+						//socket->send(auxOmbs->GetBufferPtr(), auxOmbs->GetByteLength(), aClients[i]->GetIP(), aClients[i]->GetPort());
+						aClients[i]->AddCriticalMessage(new CriticalMessage(aClients[i]->criticalId, auxOmbs->GetBufferPtr(), auxOmbs->GetByteLength()));
 
-						aClients[i]->AddCriticalPacket(CriticalPacket(auxOmbs, aClients[i]->GetCriticalId()));
-
-						//aClients[i]->AddOmbs(auxOmbs);
-
-						//CriticalPacket critical(auxOmbs.GetBufferPtr(), auxOmbs.GetByteLength(),aClients[i]->GetCriticalId());
-						//aClients[i]->AddCriticalPacket(critical);
 					}
 
 
@@ -117,13 +110,14 @@ int main() {
 			case ACK:
 				aClient = GetClientWithIpPort(remotePort, remoteIP.toString(), &aClients);
 				if (aClient != nullptr) {
+
 					imbs.Read(&aCriticalId, criticalBits);
 					aClient->RemoveCriticalPacket(aCriticalId);
+					//imbs.Read(&aCriticalId, criticalBits);
+					//aClient->RemoveCriticalPacket(aCriticalId);
 					std::cout << "Recibido ACK " << aCriticalId << "Del jugador con ID " << aClient->GetID() << std::endl;
 				
 				}
-
-
 				break;
 			case ACKPING:
 				aClient = GetClientWithIpPort(remotePort, remoteIP.toString(), &aClients);
@@ -148,11 +142,9 @@ int main() {
 		for (int i = 0; i < aClients.size(); i++) {
 			if (aClients[i]->pingCounter.getElapsedTime().asMilliseconds() > 30000) {
 				std::cout << "Player with id " << i << " timeOut " << aClients[i]->pingCounter.getElapsedTime().asMilliseconds() << std::endl;;
-				//DisconnectPlayer(&aClients, aClients[i]);
+				DisconnectPlayer(&aClients, aClients[i]);
 			}
 		}
-
-
 	}
 
 	socket->unbind();
@@ -185,56 +177,53 @@ void ReceptionThread(bool* end, std::queue<Event*>* incomingInfo, sf::UdpSocket*
 
 void PingThread(bool* end, std::vector<ServerClient*>* aClients, sf::UdpSocket* socket) {
 	while (!*end) {
-		int8_t size = aClients->size();
 		OutputMemoryBitStream ombs;
 		ombs.Write(PacketType::PING, commandBits);
-		ombs.Write(size-1, playerSizeBits);
+		//ombs.Write(size-1, playerSizeBits);
 
+		//for (int i = 0; i < aClients->size(); i++) {
+
+		//	ombs.Write(aClients->at(i)->GetID(), playerSizeBits);
+		//	ombs.Write(aClients->at(i)->GetPosition().first, coordsbits);
+		//	ombs.Write(aClients->at(i)->GetPosition().second, coordsbits);
+		//}
 		for (int i = 0; i < aClients->size(); i++) {
-
-			ombs.Write(aClients->at(i)->GetID(), playerSizeBits);
-			ombs.Write(aClients->at(i)->GetPosition().first, coordsbits);
-			ombs.Write(aClients->at(i)->GetPosition().second, coordsbits);
-
-		}
-		for (int i = 0; i < aClients->size(); i++) {
-			sf::Socket::Status status;
-			status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), aClients->at(i)->GetIP(), aClients->at(i)->GetPort());
-			if (status == sf::Socket::Status::Error) {
-				std::cout << "Error enviando packet de Ping\n";
-			}
-			else if (status == sf::Socket::Status::Done) {
-				//std::cout << "Ping enviado\n";
+			if (aClients->at(i) != nullptr) {
+				sf::Socket::Status status;
+				status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), aClients->at(i)->GetIP(), aClients->at(i)->GetPort());
+				if (status == sf::Socket::Status::Error) {
+					std::cout << "Error enviando packet de Ping\n";
+				}
+				else if (status == sf::Socket::Status::Done) {
+					std::cout << "Ping enviado\n";
+				}
 			}
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-		std::cout << "SLeep\n";
+		//std::cout << "SLeep\n";
 	}
 }
 
 void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClient) {
-	unsigned int whoLeaves = aClient->GetID();
-	bool deleted = false;
-	int index = 0;
-	do {
-		if (aClients->at(index)->GetID() == whoLeaves) {
-			deleted = true;
-			delete aClients->at(index);
-			aClients->erase(aClients->begin() + index);
-		}
-		index++;
-	} while (!deleted);
+	int disconnectedId = aClient->GetID();
+	int disconnectedIndex=GetIndexClientWithId(disconnectedId,aClients);
 
-	for (int i = 0; i < aClients->size(); i++) {
-		OutputMemoryBitStream ombs;
-		ombs.Write(PacketType::DISCONNECT,commandBits);
-		ombs.Write(aClients->at(i)->GetCriticalId(),criticalBits);
-		ombs.Write(whoLeaves, playerSizeBits);
-		CriticalPacket aCriticalPacket(ombs.GetBufferPtr(),ombs.GetByteLength(), aClients->at(i)->GetCriticalId());
-		aClients->at(i)->AddCriticalPacket(aCriticalPacket);
+	if (disconnectedIndex > 0) {
+		std::cout << "Erasing client with Id" << disconnectedId << std::endl;
+		aClients->erase(aClients->begin() + disconnectedIndex);
+
+		for (int i = 0; i < aClients->size(); i++) {
+			OutputMemoryBitStream ombs;
+			ombs.Write(PacketType::DISCONNECT, commandBits);
+			ombs.Write(aClients->at(i)->criticalId, criticalBits);
+			ombs.Write(disconnectedId, playerSizeBits);
+			aClients->at(i)->AddCriticalMessage(new CriticalMessage(aClients->at(i)->criticalId, ombs.GetBufferPtr(), ombs.GetByteLength()));
+		}
 	}
-	std::cout << "Se elimina al jugador con ID " << whoLeaves << "y se mandan " << aClients->size() << "\n";
+	else {
+		std::cout << "Trying to disconnect someone who does not exist\n";
+	}
 }
 
 /*				if (command == PacketType::HELLO) {

@@ -17,9 +17,9 @@ int main() {
 	sf::Socket::Status status;
 	sf::UdpSocket* socket = new sf::UdpSocket();
 	sf::Packet infoToSend;
-	std::vector<unsigned int>acks;
 	std::string command;
-	unsigned int myID = 0;
+	int myId = 0;
+	std::vector<int>acks;
 	std::pair<short, short> myCoordenates{ 0,0 };
 	bool end = false; //finalizar programa
 	bool connected = false; //controla cuando se ha conectado con el servidor
@@ -54,161 +54,99 @@ int main() {
 			infoReceived = incomingInfo.front();
 			InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
 			imbs.Read(&command, commandBits);
+			int playerSize = 0;
+			int aCriticalId = 0;
+			OutputMemoryBitStream ombs;
 
-			if (command == PacketType::WELCOME) {
+			switch (command) {
+			case PacketType::WELCOME:
+				imbs.Read(&myId,playerSizeBits);
+				imbs.Read(&playerSize, playerSizeBits);
+				playerSize++;
+				for (int i = 0; i < playerSize; i++) {
+					Client* aClient = new Client();
 
-				int otherPlayers=0;
+					imbs.Read(&aClient->id, playerSizeBits);
+					imbs.Read(&aClient->position.first, coordsbits);
+					imbs.Read(&aClient->position.second, coordsbits);
 
-				imbs.Read(&myID, playerSizeBits);
-				imbs.Read(&otherPlayers, playerSizeBits);
-				otherPlayers++;
-
-				for (int j = 0; j < otherPlayers; j++) {
-					unsigned int anId=0;
-					std::pair<short, short>aPos = { 0,0 };
-
-					imbs.Read(&anId, playerSizeBits);
-					imbs.Read(&aPos.first, coordsbits);
-					imbs.Read(&aPos.second, coordsbits);
-
-
-					if (myID == anId) {
-						myCoordenates = aPos;
-					}
-					else {
-						Client* aClient = new Client(anId,aPos);
-						std::cout << "Recibido jugador preexistente con ID " << anId << " y Coordenadas " << aPos.first << "," << aPos.second<<"\n";
+					if (aClient->id != myId&&myId>0) {
+						std::cout << "Recibiendo cliente preexistente con id " << aClient->id << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
 						aClients.push_back(aClient);
 					}
-
+					else {
+						myCoordenates = aClient->position;
+						delete aClient;
+					}
 				}
-
-				std::cout << "Conectado al servidor" << std::endl;
-				std::cout << "Mi ID es--> " << myID << std::endl;
-				std::cout << "Mi posicion es--> " << myCoordenates.first << ", " << myCoordenates.second << std::endl;
 
 				connected = true;
-			}
-			else if (command == PacketType::PING) {
+				std::cout << "MY ID IS " << myId << std::endl;
 
-				clockForTheServer.restart();
-				int8_t clientSize=0;
-				InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
-				imbs.Read(&clientSize, playerSizeBits);
-				clientSize++;
-
-				for (int i = 0; i < clientSize; i++) {
-					int aPlayerId;
-					//std::cout << "imbsPtr " << imbs.GetBufferPtr() << std::endl;
-					imbs.Read(&aPlayerId, playerSizeBits);
-
-
-					if (aPlayerId == myID) {
-						imbs.Read(&myCoordenates.first, coordsbits);
-						imbs.Read(&myCoordenates.second, coordsbits);
-
-					}
-					else {
-						Client* temp = nullptr;
-						temp = GetClientWithId(aPlayerId, &aClients);
-						if (temp != nullptr) {
-
-							imbs.Read(&temp->position.first, coordsbits);
-							imbs.Read(&temp->position.second, coordsbits);
-						}
-						temp = nullptr;
-					}
-				}
-
-
-				OutputMemoryBitStream ombs;
+				break;
+			case PacketType::PING:
+				
 				ombs.Write(PacketType::ACKPING, commandBits);
-				//std::cout << "Sending " << myID<<" as My Id\n";
+				socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+				clockForTheServer.restart();
+				break;
+			case PacketType::NEWPLAYER:
+				for (int i = 0; i < 1; i++) {
+					Client* newPlayer = new Client();
+					imbs.Read(&aCriticalId, criticalBits);
+					std::cout << "Reiciving Critical ID " << aCriticalId<<std::endl;
+					imbs.Read(&newPlayer->id, playerSizeBits);
+					imbs.Read(&newPlayer->position.first, coordsbits);
+					imbs.Read(&newPlayer->position.second, coordsbits);
+					acks.push_back(aCriticalId);
 
-				status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
-
-				if (status == sf::Socket::Error) {
-					std::cout << "Error enviando ACKPING\n";
-				}
-				else if (status == sf::Socket::Done) {
-					//std::cout << "Ping recibido y respondido\n";
-				}
-
-			}
-
-
-				else if (command == PacketType::NEWPLAYER) {
-					unsigned int criticalId=1;
-					unsigned int aPlayerId=0;
-					std::pair<short, short> aPosition{ 0,0 };
-					imbs.Read(&criticalId, criticalBits);
-					imbs.Read(&aPlayerId, playerSizeBits);
-					imbs.Read(&aPosition.first, coordsbits);
-					imbs.Read(&aPosition.second, coordsbits);
-
-					std::cout << "Recibido CRITICAL MESSAGE con ID" << criticalId<<"\n";
-
-					acks.push_back(criticalId);
-					
-					if (!ClientExists(aClients,aPlayerId)) {
-						Client* newClient = new Client(aPlayerId,aPosition);
-						aClients.push_back(newClient);
-						std::cout << "Recibido NewPlayer con id " << aPlayerId << " en coordenadas " << aPosition.first << "," << aPosition.second << "\n";
+					if (GetClientWithId(newPlayer->id, aClients) == nullptr) {
+						aClients.push_back(newPlayer);
+						std::cout << "Adding player with id " << newPlayer->id << std::endl;
 					}
 					else {
-						std::cout << "Recepcion de NewPlayer ya existente\n";
+						std::cout << "Already existing player received\n";
+						delete newPlayer;
 					}
-
 				}
-
-				else if (command == PacketType::DISCONNECT) {
-
-					unsigned int leaverId=1;
-					unsigned int criticalId = 1;
-
-					imbs.Read(&criticalId, criticalBits);
+				break;
+			case PacketType::DISCONNECT:
+				for (int i = 0; i < 1; i++) {
+					int leaverId=0;
+					imbs.Read(&aCriticalId, criticalBits);
 					imbs.Read(&leaverId, playerSizeBits);
 
-					int index = GetIndexClientWithId(leaverId, &aClients);
+					acks.push_back(aCriticalId);
+					if (GetClientWithId(aCriticalId,aClients) != nullptr) {
+						std::cout << "Player " << leaverId << " Disconnected\n";
+					}
+					else {
+						std::cout << "Trying to disconnect non existing player with id " << leaverId << std::endl;
+					}
 
-					for (int i = 0; i < aClients.size(); i++){
-						std::cout << aClients[i]->id << std::endl;
-					}
-					if (index > -1) {
-						delete aClients.at(index);
-						aClients.erase(aClients.begin() + index);
-						std::cout << "Cliente con ID " << leaverId << "desconectado\n";
-					}
 
 				}
+				break;
+			}
 
 			incomingInfo.pop();
 		}
 
-		for (int i = 0; i < acks.size(); i++) {
-
-			OutputMemoryBitStream ombs;
-			ombs.Write(PacketType::ACK, commandBits);
-			//ombs.Write(myID, playerSizeBits);
-			ombs.Write(acks[i], criticalBits);
-
-			status = socket->send(ombs.GetBufferPtr(),ombs.GetByteLength(),serverIp,serverPort);
-
-			if (status == sf::Socket::Status::Error) {
-				std::cout << "Error enviando ACK\n";
+		if (acks.size() > 0) {
+			for (int i = 0; i < acks.size(); i++) {
+				OutputMemoryBitStream ombs;
+				ombs.Write(PacketType::ACK, commandBits);
+				ombs.Write(acks[i], criticalBits);
+				std::cout << "Sending ack " << acks[i] << std::endl;
+				socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
 			}
-			else if (status == sf::Socket::Status::Done) {
-				std::cout << "ACK " << acks[i] << "enviado\n";
-			}
-
+			acks.clear();
 		}
-		acks.clear();
 
-
-		if (clockForTheServer.getElapsedTime().asMilliseconds() > 5000) {
-			//end = true;
-			//std::cout << "SERVIDOR DESCONECTADOOOO\n";
-			//socket->unbind();
+		if (clockForTheServer.getElapsedTime().asMilliseconds() > 30000) {
+			end = true;
+			std::cout << "SERVIDOR DESCONECTADOOOO\n";
+			socket->unbind();
 		}
 
 	}

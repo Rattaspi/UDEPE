@@ -7,32 +7,15 @@
 
 #define LOSSRATE 0;
 
-//CLASE PARA TENER EL PAQUETE RELACIONADO CON UN ID
-class CriticalPacket {
-private:
-	//sf::Packet packet;
-	//OutputMemoryBitStream ombs;
-
-
-	unsigned int id;
+class CriticalMessage {
 public:
-	OutputMemoryBitStream* ombs;
-	char* message;
+	int criticalId;
 	uint32_t messageSize;
-	CriticalPacket(/*OutputMemoryBitStream ombs*/char* message, uint32_t messageSize, unsigned int id) {
-		//this->ombs = ombs;
-		this->id = id;
+	char* message;
+	CriticalMessage(int criticalId, char* message, uint32_t messageSize) {
+		this->criticalId = criticalId;
 		this->message = message;
 		this->messageSize = messageSize;
-	}
-
-	CriticalPacket(OutputMemoryBitStream* ombs, unsigned int id) {
-		this->id = id;
-		this->ombs = ombs;
-	}
-
-	unsigned int GetID() {
-		return id;
 	}
 };
 
@@ -40,40 +23,47 @@ class Client {
 public:
 	std::string userName;
 	std::pair<short, short> position;
-	unsigned int id;
+	int id;
+	//unsigned int id;
 	Client() {
 		userName = "";
+		position.first = 0;
+		position.second = 0;
 		id = 0;
 	}
 
-	Client(unsigned int id) {
+	Client(int id) {
 		this->id = id;
+		userName = "";
+		position.first = 0;
+		position.second = 0;
 	}
 
-	Client(unsigned int id, std::pair<short, short> position){
+	Client(int id, std::pair<short, short> position){
 		this->id = id;
 		this->position = position;
 	}
+
 };
 
-class ServerClient:Client{
+class ServerClient:public Client{
 private:
 	std::mutex mut;
 	unsigned short port;
 	std::string ip;
-	std::vector<CriticalPacket> criticalVector; //POR ALGUNA RAZON NO PUEDO ACCEDER A ESTE VECTOR
-	unsigned int criticalPacketID; //para llevar track del id de los mensajes criticos
+	std::vector<CriticalMessage> criticalVector; //POR ALGUNA RAZON NO PUEDO ACCEDER A ESTE VECTOR
 public:
+	int criticalId; //para llevar track del id de los mensajes criticos
 	sf::Clock pingCounter;
-	ServerClient(std::string ip, unsigned short port, unsigned int id, std::pair<short, short> position) {
+	ServerClient(std::string ip, unsigned short port, int id, std::pair<short, short> position) {
 		this->ip = ip;
 		this->port = port;
 		this->id = id;
 		this->position = position;
-		criticalPacketID = 0;
 		pingCounter.restart();
 		userName = "Player" + id;
 	}
+
 
 	unsigned short GetPort() {
 		return port;
@@ -81,37 +71,22 @@ public:
 	std::string GetIP() {
 		return ip;
 	}
-	unsigned int GetID() {
+	int GetID() {
 		return id;
-	}
-
-	unsigned int GetCriticalId() {
-		return criticalPacketID;
 	}
 
 	std::pair<short, short> GetPosition() {
 		return position;
 	}
 	//Añade al vector de paquetes criticos un nuevo paquete
-	void AddCriticalPacket(CriticalPacket aCritical) {
-		//Aqui hay que crear un CriticalPacket y meterlo en el vector
-		//Despues de crearlo tenemos que incrementar en 1 el ID de los paquetes criticos.
-
-
-		criticalVector.push_back(aCritical);
-
-		mut.lock();
-		criticalPacketID+=1;
-		mut.unlock();
-		
-		std::cout << "CriticalPacket incrementado a" << criticalPacketID<<"\n";
-
-
+	void AddCriticalMessage(CriticalMessage* critical) {
+		criticalVector.push_back(*critical);
+		criticalId++;
 	}
 
 	void DebugCriticalPackets() {
 		for (int i = 0; i < criticalVector.size(); i++) {
-			std::cout << "CRITICAL PACKET ID-> " << criticalVector[i].GetID() << std::endl;
+			std::cout << "CRITICAL PACKET ID-> " << criticalVector[i].criticalId << std::endl;
 		}
 	}
 
@@ -120,46 +95,64 @@ public:
 	}
 
 	void SendAllCriticalPackets(sf::UdpSocket* socket) {
-		//se itera todo el vector de paquetes y se envian todos a la ip y puerto de este cliente
-		sf::Socket::Status status;
-		int lossRate = LOSSRATE;
+		DebugCriticalPackets();
 
-		//DebugCriticalPackets();
+		sf::Socket::Status status;
 
 		for (int i = 0; i < criticalVector.size(); i++) {
-			if ((int)(rand() % 100) < lossRate) {
-				std::cout << "PAQUETE CRITICO PERDIDO\n";
-			}
-			else {
-				//OutputMemoryBitStream ombs = criticalVector[i].GetPacket(); //hay que recoger el packet antes porque al poner la funcion GetPacket dentro del send da error
-				//status = socket->send(criticalVector[i].message, criticalVector[i].messageSize, ip, port);
-				
-				status = socket->send(criticalVector[i].ombs->GetBufferPtr(), criticalVector[i].ombs->GetByteLength(), ip, port);
+			status = socket->send(criticalVector[i].message, criticalVector[i].messageSize, ip, port);
 
-				//std::cout << "ombsPTR " << criticalVector[i].message << std::endl;
-
-				if (status == sf::Socket::Status::Error) {
-					std::cout << "Error enviando packet critico\n";
-				}
-				else if (status == sf::Socket::Status::Done) {
-					//std::cout << "PAQUETE CRITICO ENVIADO CORRECTAMENTE\n";
-				}
+			if (status == sf::Socket::Status::Error) {
+				std::cout << "Error enviando packet critico\n";
 			}
+			else if (status == sf::Socket::Status::Done) {
+				//std::cout << "PAQUETE CRITICO ENVIADO CORRECTAMENTE\n";
+			}
+
 		}
-	}
-	void RemoveCriticalPacket(unsigned int id) {
-		//se itera todo el vector de paquetes criticos y eliminamos el que tiene el id que le pasamos a esta funcion
 
+
+	}
+
+	//void SendAllCriticalPackets(sf::UdpSocket* socket) {
+	//	//se itera todo el vector de paquetes y se envian todos a la ip y puerto de este cliente
+	//	sf::Socket::Status status;
+	//	int lossRate = LOSSRATE;
+
+	//	//DebugCriticalPackets();
+
+	//	for (int i = 0; i < criticalVector.size(); i++) {
+	//		if ((int)(rand() % 100) < lossRate) {
+	//			std::cout << "PAQUETE CRITICO PERDIDO\n";
+	//		}
+	//		else {
+	//			//OutputMemoryBitStream ombs = criticalVector[i].GetPacket(); //hay que recoger el packet antes porque al poner la funcion GetPacket dentro del send da error
+	//			//status = socket->send(criticalVector[i].message, criticalVector[i].messageSize, ip, port);
+	//			
+	//			status = socket->send(criticalVector[i].ombs->GetBufferPtr(), criticalVector[i].ombs->GetByteLength(), ip, port);
+
+	//			//std::cout << "ombsPTR " << criticalVector[i].message << std::endl;
+
+	//			if (status == sf::Socket::Status::Error) {
+	//				std::cout << "Error enviando packet critico\n";
+	//			}
+	//			else if (status == sf::Socket::Status::Done) {
+	//				//std::cout << "PAQUETE CRITICO ENVIADO CORRECTAMENTE\n";
+	//			}
+	//		}
+	//	}
+	//}
+	void RemoveCriticalPacket(int id) {
+		//se itera todo el vector de paquetes criticos y eliminamos el que tiene el id que le pasamos a esta funcion
 		int actualIndex = -1;
 		for (int i = 0; i < criticalVector.size(); i++) {
-			if (criticalVector[i].GetID() == id) {
+			if (criticalVector[i].criticalId == id) {
 				actualIndex = i;
 				break;
 			}
 		}
 
 		if (actualIndex != -1){
-			delete criticalVector[actualIndex].ombs;
 			criticalVector.erase(criticalVector.begin() + actualIndex);
 			std::cout << "CriticalPacket en posicion " << actualIndex << " borrado con exito\n";
 		}

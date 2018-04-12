@@ -51,58 +51,98 @@ int main() {
 			sf::Socket::Status status;
 			bool exists = false;
 			ServerClient* aClient;
-			int aCriticalId=0;
+			int aCriticalId = 0 ;
+			int repeatingId = 0;
 			switch (command) {
 			case HELLO:
 
 				for (int i = 0; i < aClients.size(); i++) {
 					if (aClients[i]->GetIP() == remoteIP&&aClients[i]->GetPort() == remotePort) {
 						exists = true;
+						repeatingId = aClients[i]->GetID();
 					}
 				}
 
-				ombs.Write(PacketType::WELCOME, commandBits);
-				ombs.Write(clientID, playerSizeBits);
+				if (aClients.size() < 4) {
+					ombs.Write(PacketType::WELCOME, commandBits);
 
-				for (int i=0; i < 1; i++) {
-					int aClientSizeMinus = aClients.size();
-					aClientSizeMinus--;
-					ombs.Write(aClientSizeMinus, playerSizeBits);
-				}
-				for (int i = 0; i < aClients.size(); i++) {
-					ombs.Write(aClients[i]->GetID(), playerSizeBits);
-					ombs.Write(aClients[i]->GetPosition().first, coordsbits);
-					ombs.Write(aClients[i]->GetPosition().second, coordsbits);
-				}
-
-				status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
-
-				if (status == sf::Socket::Error) {
-					std::cout << "ERROR nen\n";
-				}
-
-				if (!exists) {
-					std::pair<short, short> coords{ rand() % 800,rand() % 600 };
-
-
+					if (!exists) {
+						ombs.Write(clientID, playerSizeBits);
+					}
+					else {
+						ombs.Write(repeatingId, playerSizeBits);
+					}
+					for (int i = 0; i < 1; i++) {
+						int aClientSizeMinus = aClients.size();
+						aClientSizeMinus--;
+						ombs.Write(aClientSizeMinus, playerSizeBits);
+					}
 					for (int i = 0; i < aClients.size(); i++) {
-
-						OutputMemoryBitStream* auxOmbs = new OutputMemoryBitStream();
-
-						auxOmbs->Write(PacketType::NEWPLAYER,commandBits);
-						auxOmbs->Write(aClients[i]->criticalId, criticalBits);
-						auxOmbs->Write(clientID, playerSizeBits);
-						auxOmbs->Write(coords.first,coordsbits);
-						auxOmbs->Write(coords.second, coordsbits);
-
-						//socket->send(auxOmbs->GetBufferPtr(), auxOmbs->GetByteLength(), aClients[i]->GetIP(), aClients[i]->GetPort());
-						aClients[i]->AddCriticalMessage(new CriticalMessage(aClients[i]->criticalId, auxOmbs->GetBufferPtr(), auxOmbs->GetByteLength()));
-
+						ombs.Write(aClients[i]->GetID(), playerSizeBits);
+						ombs.Write(aClients[i]->GetPosition().first, coordsbits);
+						ombs.Write(aClients[i]->GetPosition().second, coordsbits);
 					}
 
+					status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
 
-					aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, coords));
-					clientID++;
+					if (status == sf::Socket::Error) {
+						std::cout << "ERROR nen\n";
+					}
+
+					if (!exists) {
+						std::pair<short, short> coords{ rand() % 800,rand() % 600 };
+
+
+						for (int i = 0; i < aClients.size(); i++) {
+
+							OutputMemoryBitStream* auxOmbs = new OutputMemoryBitStream();
+
+							auxOmbs->Write(PacketType::NEWPLAYER, commandBits);
+							auxOmbs->Write(aClients[i]->criticalId, criticalBits);
+							auxOmbs->Write(clientID, playerSizeBits);
+							auxOmbs->Write(coords.first, coordsbits);
+							auxOmbs->Write(coords.second, coordsbits);
+
+							//socket->send(auxOmbs->GetBufferPtr(), auxOmbs->GetByteLength(), aClients[i]->GetIP(), aClients[i]->GetPort());
+							aClients[i]->AddCriticalMessage(new CriticalMessage(aClients[i]->criticalId, auxOmbs->GetBufferPtr(), auxOmbs->GetByteLength()));
+
+						}
+
+
+						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, coords));
+						clientID++;
+					}
+				}
+				else {
+					if (exists) {
+						ombs.Write(PacketType::WELCOME, commandBits);
+						ombs.Write(repeatingId, playerSizeBits);
+						
+						for (int i = 0; i < 1; i++) {
+							int aClientSizeMinus = aClients.size();
+							aClientSizeMinus--;
+							ombs.Write(aClientSizeMinus, playerSizeBits);
+						}
+						for (int i = 0; i < aClients.size(); i++) {
+							ombs.Write(aClients[i]->GetID(), playerSizeBits);
+							ombs.Write(aClients[i]->GetPosition().first, coordsbits);
+							ombs.Write(aClients[i]->GetPosition().second, coordsbits);
+						}
+
+						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
+
+						if (status == sf::Socket::Error) {
+							std::cout << "ERROR nen\n";
+						}
+					}
+					else {
+						ombs.Write(PacketType::NOTWELCOME, commandBits);
+						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
+
+						if (status == sf::Socket::Error) {
+							std::cout << "ERROR nen\n";
+						}
+					}
 				}
 
 

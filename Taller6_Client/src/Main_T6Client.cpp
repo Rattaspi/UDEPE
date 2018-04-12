@@ -127,6 +127,10 @@ int main() {
 
 				}
 				break;
+			case PacketType::NOTWELCOME:
+				std::cout << "SERVER FULL\n";
+				end = true;
+				break;
 			}
 
 			incomingInfo.pop();
@@ -153,6 +157,7 @@ int main() {
 	
 
 	system("pause");
+	socket->unbind();
 	t.join();
 	delete socket;
 	exit(0);

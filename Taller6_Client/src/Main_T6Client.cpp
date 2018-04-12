@@ -5,6 +5,7 @@
 #include <Client.h>
 #include "Utils.h"
 #include "Event.h"
+#include <SFML\Graphics.hpp>
 
 void ReceptionThread(bool* end, std::queue<Event>* incomingInfo, sf::UdpSocket* socket);
 
@@ -30,6 +31,10 @@ int main() {
 	std::thread t(&ReceptionThread, &end, &incomingInfo, socket);
 
 	sf::Clock clock;
+
+	sf::RenderWindow window(sf::VideoMode(800, 600), "Sin acumulación en cliente");
+
+
 	while (!end) {
 		//CONTROL DE REENVIOS POR HASTA QUE EL SERVIDOR NOS CONFIRMA LA CONEXION
 		if (clock.getElapsedTime().asMilliseconds() > 500 && !connected) {
@@ -65,6 +70,7 @@ int main() {
 				playerSize++;
 				for (int i = 0; i < playerSize; i++) {
 					Client* aClient = new Client();
+					aClient->position.first =aClient->position.second=0;
 
 					imbs.Read(&aClient->id, playerSizeBits);
 					imbs.Read(&aClient->position.first, coordsbits);
@@ -147,6 +153,64 @@ int main() {
 			acks.clear();
 		}
 
+
+		if (window.isOpen()) {
+			sf::Event event;
+
+			//Este primer WHILE es para controlar los eventos del mouse
+			while (window.pollEvent(event))
+			{
+				switch (event.type)
+				{
+				case sf::Event::Closed:
+					window.close();
+					break;
+				case sf::Event::KeyPressed:
+					if (event.key.code == sf::Keyboard::Left)
+					{
+						//socket->send(pckLeft, serverIp, serverPort);
+						myCoordenates.first-=10;
+
+					}
+					else if (event.key.code == sf::Keyboard::Right)
+					{
+						//socket->send(pckRight, serverIp, serverPort);
+						myCoordenates.first += 10;
+						std::cout << "My Coordenates " << myCoordenates.first <<", "<< myCoordenates.second << std::endl;
+
+					}
+					break;
+
+				default:
+					break;
+
+				}
+			}
+
+
+			window.clear();
+
+			sf::RectangleShape rectBlanco(sf::Vector2f(1, 600));
+			rectBlanco.setFillColor(sf::Color::White);
+			rectBlanco.setPosition(sf::Vector2f(200, 0));
+			window.draw(rectBlanco);
+			rectBlanco.setPosition(sf::Vector2f(600, 0));
+			window.draw(rectBlanco);
+
+			sf::RectangleShape rectAvatar(sf::Vector2f(60, 60));
+			rectAvatar.setFillColor(sf::Color::Green);
+			rectAvatar.setPosition(sf::Vector2f(myCoordenates.first, myCoordenates.second));
+			window.draw(rectAvatar);
+
+
+
+
+
+
+			window.display();
+
+		}
+
 		if (clockForTheServer.getElapsedTime().asMilliseconds() > 30000) {
 			end = true;
 			std::cout << "SERVIDOR DESCONECTADOOOO\n";
@@ -155,7 +219,9 @@ int main() {
 
 	}
 	
-
+	if (window.isOpen()) {
+		window.close();
+	}
 	system("pause");
 	socket->unbind();
 	t.join();

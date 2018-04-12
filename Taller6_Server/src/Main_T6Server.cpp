@@ -53,8 +53,12 @@ int main() {
 			ServerClient* aClient;
 			int aCriticalId = 0 ;
 			int repeatingId = 0;
+			std::pair<short, short> coords;
+
 			switch (command) {
 			case HELLO:
+				coords.first = rand() % 800;
+				coords.second = rand() % 600;
 
 				for (int i = 0; i < aClients.size(); i++) {
 					if (aClients[i]->GetIP() == remoteIP&&aClients[i]->GetPort() == remotePort) {
@@ -67,7 +71,10 @@ int main() {
 					ombs.Write(PacketType::WELCOME, commandBits);
 
 					if (!exists) {
+						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, coords));
 						ombs.Write(clientID, playerSizeBits);
+						clientID++;
+
 					}
 					else {
 						ombs.Write(repeatingId, playerSizeBits);
@@ -90,9 +97,8 @@ int main() {
 					}
 
 					if (!exists) {
-						std::pair<short, short> coords{ rand() % 800,rand() % 600 };
 
-
+						std::cout << coords.second << "--AAAAAAAAAAAAAAA\n";
 						for (int i = 0; i < aClients.size(); i++) {
 
 							OutputMemoryBitStream* auxOmbs = new OutputMemoryBitStream();
@@ -109,8 +115,6 @@ int main() {
 						}
 
 
-						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, coords));
-						clientID++;
 					}
 				}
 				else {

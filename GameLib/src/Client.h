@@ -7,6 +7,44 @@
 
 #define LOSSRATE 0;
 
+class AccumMove {
+public:
+	int idMove;
+	std::pair<short, short> delta;
+	std::pair<short, short> absolute;
+	AccumMove() {
+		idMove = 0;
+		delta = { 0,0 };
+		absolute = { 0,0 };
+	}
+
+	AccumMove(int idMove, std::pair<short, short> delta, std::pair<short, short> absolute) {
+		this->idMove = idMove;
+		this->delta = delta;
+		this->absolute = absolute;
+	}
+
+};
+
+class AccumMoveServer : public AccumMove {
+public:
+	int playerID;
+	AccumMoveServer(int idMove, std::pair<short, short> delta, std::pair<short, short> absolute, int playerID) {
+		this->idMove = idMove;
+		this->delta = delta;
+		this->absolute = absolute;
+		this->playerID = playerID;
+	}
+
+	AccumMoveServer() {
+		this->idMove = 0;
+		this->delta = { 0,0 };
+		this->absolute = { 0,0 };
+		this->playerID = 0;
+	}
+
+};
+
 class CriticalMessage {
 public:
 	int criticalId;
@@ -53,6 +91,9 @@ private:
 	std::string ip;
 	std::vector<CriticalMessage> criticalVector; //POR ALGUNA RAZON NO PUEDO ACCEDER A ESTE VECTOR
 public:
+	std::vector<AccumMoveServer> acumulatedMoves;
+	sf::Clock moveClock;
+
 	int criticalId; //para llevar track del id de los mensajes criticos
 	sf::Clock pingCounter;
 	ServerClient(std::string ip, unsigned short port, int id, std::pair<short, short> position) {

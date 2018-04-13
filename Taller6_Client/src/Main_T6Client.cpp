@@ -22,6 +22,9 @@ int main() {
 	int myId = 0;
 	std::vector<int>acks;
 	std::pair<short, short> myCoordenates{ 0,0 };
+	std::pair<short, short> auxPosition{ 0,0 };
+	std::vector<AccumMove>nonAckMoves;
+	int currentMoveId=0;
 	bool end = false; //finalizar programa
 	bool connected = false; //controla cuando se ha conectado con el servidor
 	std::queue<Event> incomingInfo; //cola de paquetes entrantes
@@ -33,7 +36,7 @@ int main() {
 	sf::Clock clock;
 
 	sf::RenderWindow window(sf::VideoMode(800, 600), "Sin acumulación en cliente");
-
+	std::vector<sf::RectangleShape> playerRenders;
 
 	while (!end) {
 		//CONTROL DE REENVIOS POR HASTA QUE EL SERVIDOR NOS CONFIRMA LA CONEXION
@@ -60,7 +63,9 @@ int main() {
 			InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
 			imbs.Read(&command, commandBits);
 			int playerSize = 0;
+			int aPlayerId = 0;
 			int aCriticalId = 0;
+			std::pair<short, short>someCoords = { 0,0 };
 			OutputMemoryBitStream ombs;
 
 			switch (command) {
@@ -79,9 +84,13 @@ int main() {
 					if (aClient->id != myId&&myId>0) {
 						std::cout << "Recibiendo cliente preexistente con id " << aClient->id << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
 						aClients.push_back(aClient);
+						sf::RectangleShape playerRender(sf::Vector2f(60, 60));
+						playerRenders.push_back(playerRender);
+
 					}
 					else {
 						myCoordenates = aClient->position;
+						auxPosition = myCoordenates;
 						delete aClient;
 					}
 				}
@@ -101,10 +110,15 @@ int main() {
 					Client* newPlayer = new Client();
 					imbs.Read(&aCriticalId, criticalBits);
 					std::cout << "Reiciving Critical ID " << aCriticalId<<std::endl;
-					imbs.Read(&newPlayer->id, playerSizeBits);
+					imbs.Read(&aPlayerId, playerSizeBits);
+					newPlayer->id = aPlayerId;
 					imbs.Read(&newPlayer->position.first, coordsbits);
 					imbs.Read(&newPlayer->position.second, coordsbits);
 					acks.push_back(aCriticalId);
+
+					sf::RectangleShape playerRender(sf::Vector2f(60, 60));
+
+					playerRenders.push_back(playerRender);
 
 					if (GetClientWithId(newPlayer->id, aClients) == nullptr) {
 						aClients.push_back(newPlayer);
@@ -136,6 +150,34 @@ int main() {
 			case PacketType::NOTWELCOME:
 				std::cout << "SERVER FULL\n";
 				end = true;
+				break;
+			case PacketType::ACKMOVE:
+
+				imbs.Read(&aPlayerId, playerSizeBits);
+				imbs.Read(&aCriticalId, criticalBits); //Se lee aCriticalId pero en realidad es el ID del MOVIMIENTO
+				AccumMove accumMove;
+				Client* aClient = GetClientWithId(aPlayerId,aClients);
+
+
+
+				if (aClient != nullptr) {
+					imbs.Read(&someCoords.first, coordsbits);
+					imbs.Read(&someCoords.second, coordsbits);
+					aClient->position = someCoords;
+
+					if (aPlayerId == myId) {
+						myCoordenates = someCoords;
+					}
+
+				}
+
+				std::cout << "Recibida posicion de jugador con ID " <<aPlayerId<< ".Sus coordenadas son "<<someCoords.first<<", "<<someCoords.second<<"\n";
+
+		/*		
+				
+
+				ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first, coordsbits);
+				ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second, coordsbits);*/
 				break;
 			}
 
@@ -169,15 +211,99 @@ int main() {
 					if (event.key.code == sf::Keyboard::Left)
 					{
 						//socket->send(pckLeft, serverIp, serverPort);
-						myCoordenates.first-=10;
+						int deltaX = -1;
+						int deltaY = 0;
+						auxPosition.first+=deltaX;
+						AccumMove move;
+						move.absolute = auxPosition;
+						//std::cout << "ENVIANDO AUX " << auxPosition.first << ", " << auxPosition.second << "\n";
+						move.idMove = currentMoveId;
+						currentMoveId++;
+						nonAckMoves.push_back(move);
+						OutputMemoryBitStream ombs;
+						ombs.Write(PacketType::MOVE, commandBits);
+						ombs.Write(move.idMove,criticalBits);
+						ombs.Write(deltaX, deltaMoveBits);
+						ombs.Write(deltaY, deltaMoveBits);
+						ombs.Write(auxPosition.first, coordsbits);
+						ombs.Write(auxPosition.second, coordsbits);
+						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+						if (status == sf::Socket::Error) {
+							std::cout << "ERROR ENVIANDO MOVE\n";
+						}
 
 					}
 					else if (event.key.code == sf::Keyboard::Right)
 					{
-						//socket->send(pckRight, serverIp, serverPort);
-						myCoordenates.first += 10;
-						std::cout << "My Coordenates " << myCoordenates.first <<", "<< myCoordenates.second << std::endl;
+						int deltaX = 1;
+						int deltaY = 0;
+						auxPosition.first += deltaX;
+						AccumMove move;
+						move.absolute = auxPosition;
+						//std::cout << "ENVIANDO AUX " << auxPosition.first << ", " << auxPosition.second << "\n";
+						move.idMove = currentMoveId;
+						currentMoveId++;
+						nonAckMoves.push_back(move);
+						OutputMemoryBitStream ombs;
+						ombs.Write(PacketType::MOVE, commandBits);
+						ombs.Write(move.idMove, criticalBits);
+						ombs.Write(deltaX, deltaMoveBits);
+						ombs.Write(deltaY, deltaMoveBits);
+						ombs.Write(auxPosition.first, coordsbits);
+						ombs.Write(auxPosition.second, coordsbits);
+						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
 
+						if (status == sf::Socket::Error) {
+							std::cout << "ERROR ENVIANDO MOVE\n";
+						}
+					}
+					else if (event.key.code == sf::Keyboard::Up) {
+						int deltaX = 0;
+						int deltaY = -1;
+						auxPosition.second+= deltaY;
+						AccumMove move;
+						move.absolute = auxPosition;
+						//std::cout << "ENVIANDO AUX " << auxPosition.first << ", " << auxPosition.second << "\n";
+						move.idMove = currentMoveId;
+						currentMoveId++;
+						nonAckMoves.push_back(move);
+						OutputMemoryBitStream ombs;
+						ombs.Write(PacketType::MOVE, commandBits);
+						ombs.Write(move.idMove, criticalBits);
+						ombs.Write(deltaX, deltaMoveBits);
+						ombs.Write(deltaY, deltaMoveBits);
+						ombs.Write(auxPosition.first, coordsbits);
+						ombs.Write(auxPosition.second, coordsbits);
+						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+						if (status == sf::Socket::Error) {
+							std::cout << "ERROR ENVIANDO MOVE\n";
+						}
+					}
+					else if (event.key.code == sf::Keyboard::Down) {
+
+						int deltaX = 0;
+						int deltaY = 1;
+						auxPosition.second += deltaY;
+						AccumMove move;
+						move.absolute = auxPosition;
+						//std::cout << "ENVIANDO AUX " << auxPosition.first << ", " << auxPosition.second << "\n";
+						move.idMove = currentMoveId;
+						currentMoveId++;
+						nonAckMoves.push_back(move);
+						OutputMemoryBitStream ombs;
+						ombs.Write(PacketType::MOVE, commandBits);
+						ombs.Write(move.idMove, criticalBits);
+						ombs.Write(deltaX, deltaMoveBits);
+						ombs.Write(deltaY, deltaMoveBits);
+						ombs.Write(auxPosition.first, coordsbits);
+						ombs.Write(auxPosition.second, coordsbits);
+						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+						if (status == sf::Socket::Error) {
+							std::cout << "ERROR ENVIANDO MOVE\n";
+						}
 					}
 					break;
 
@@ -195,13 +321,19 @@ int main() {
 			rectBlanco.setPosition(sf::Vector2f(200, 0));
 			window.draw(rectBlanco);
 			rectBlanco.setPosition(sf::Vector2f(600, 0));
-			window.draw(rectBlanco);
+			//window.draw(rectBlanco);
 
-			sf::RectangleShape rectAvatar(sf::Vector2f(60, 60));
-			rectAvatar.setFillColor(sf::Color::Green);
-			rectAvatar.setPosition(sf::Vector2f(myCoordenates.first, myCoordenates.second));
-			window.draw(rectAvatar);
+			//sf::RectangleShape rectAvatar(sf::Vector2f(60, 60));
+			//rectAvatar.setFillColor(sf::Color::Green);
+			//rectAvatar.setPosition(sf::Vector2f(myCoordenates.first, myCoordenates.second));
+			//window.draw(rectAvatar);
 
+			for (int i = 0; i < aClients.size(); i++) {
+				//sf::RectangleShape rectAvatar(sf::Vector2f(60, 60));
+				playerRenders[i].setFillColor(sf::Color::Green);
+				playerRenders[i].setPosition(sf::Vector2f(aClients[i]->position.first, aClients[i]->position.second));
+				window.draw(playerRenders[i]);
+			}
 
 
 

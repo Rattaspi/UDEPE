@@ -24,7 +24,7 @@ int main() {
 	status = socket->bind(50000);
 	bool end = false;
 	std::queue<Event*> incomingInfo; //cola de paquetes entrantes
-
+	std::vector<std::vector<AccumMoveServer>> acumulatedMoves;
 
 	if (status != sf::Socket::Done) {
 		std::cout << "No se ha podido vincular al puerto" << std::endl;
@@ -73,6 +73,7 @@ int main() {
 					if (!exists) {
 						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, coords));
 						ombs.Write(clientID, playerSizeBits);
+						repeatingId = clientID;
 						clientID++;
 
 					}
@@ -105,7 +106,7 @@ int main() {
 
 							auxOmbs->Write(PacketType::NEWPLAYER, commandBits);
 							auxOmbs->Write(aClients[i]->criticalId, criticalBits);
-							auxOmbs->Write(clientID, playerSizeBits);
+							auxOmbs->Write(repeatingId, playerSizeBits);
 							auxOmbs->Write(coords.first, coordsbits);
 							auxOmbs->Write(coords.second, coordsbits);
 
@@ -170,6 +171,25 @@ int main() {
 					std::cout << "Recibido ACKPING de jugador " << aClient->GetID() << std::endl;
 				}
 				break;
+			case MOVE:
+				aClient = GetClientWithIpPort(remotePort, remoteIP.toString(), &aClients);
+				if (aClient != nullptr) {
+					AccumMoveServer accumMove;
+					accumMove.playerID = aClient->id;
+					imbs.Read(&accumMove.idMove, criticalBits);
+					imbs.Read(&accumMove.delta.first, deltaMoveBits);
+					imbs.Read(&accumMove.delta.second, deltaMoveBits);
+					imbs.Read(&accumMove.absolute.first, coordsbits);
+					imbs.Read(&accumMove.absolute.second, coordsbits);
+					std::cout << "Recibido accumMove de jugador ID " << aClient->id << " que tiene delta = " << accumMove.delta.first << ", " << accumMove.delta.second << " y absolute = " << accumMove.absolute.first << ", " <<  accumMove.absolute.second << std::endl;;
+					//acumulatedMoves.push_back(accumMove);
+					aClient->acumulatedMoves.push_back(accumMove);
+				}
+				else {
+					std::cout << "Null player trying to send movemen\n";
+				}
+
+				break;
 			}
 
 			incomingInfo.pop();
@@ -183,10 +203,46 @@ int main() {
 			criticalClock.restart();
 		}
 
+
 		for (int i = 0; i < aClients.size(); i++) {
 			if (aClients[i]->pingCounter.getElapsedTime().asMilliseconds() > 30000) {
-				std::cout << "Player with id " << i << " timeOut " << aClients[i]->pingCounter.getElapsedTime().asMilliseconds() << std::endl;;
+				std::cout << "Player with id " << aClients[i]->GetID() << " timeOut " << aClients[i]->pingCounter.getElapsedTime().asMilliseconds() << std::endl;;
 				DisconnectPlayer(&aClients, aClients[i]);
+			}
+			else if (aClients[i]->moveClock.getElapsedTime().asMilliseconds() > 100) {
+
+				if (aClients[i]->acumulatedMoves.size() > 0) {
+
+					OutputMemoryBitStream ombs;
+					int latestMessageIndex = 0;
+					for (int j = 0; j < aClients[i]->acumulatedMoves.size(); j++) {
+						if (aClients[i]->acumulatedMoves[j].idMove > aClients[i]->acumulatedMoves[latestMessageIndex].idMove) {
+							latestMessageIndex = j;
+						}
+					}
+					ombs.Write(PacketType::ACKMOVE, commandBits);
+					ombs.Write(aClients[i]->id, playerSizeBits);
+					ombs.Write(latestMessageIndex, criticalBits);
+					//ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].delta.first,deltaMoveBits);
+					//ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].delta.second, deltaMoveBits);
+
+
+					ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first, coordsbits);
+					ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second, coordsbits);
+					aClients[i]->position = aClients[i]->acumulatedMoves[latestMessageIndex].absolute;
+					aClients[i]->acumulatedMoves.clear();
+
+					std::cout << "Enviada posicion de jugador con ID " << aClients[i]->GetID() << ".Sus coordenadas son " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first<< ", " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second << "\n";
+
+
+					for (int j = 0; j < aClients.size(); j++) {
+						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), aClients[j]->GetIP(), aClients[j]->GetPort());
+						if (status == sf::Socket::Error) {
+							std::cout << "ERROR ENVIANDO ACTUALIZACION DE POSICION\n";
+						}
+					}
+				}
+				aClients[i]->moveClock.restart();
 			}
 		}
 	}

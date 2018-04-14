@@ -23,6 +23,7 @@ int main() {
 	std::vector<int>acks;
 	std::pair<short, short> myCoordenates{ 0,0 };
 	std::pair<short, short> auxPosition{ 0,0 };
+	std::pair<short, short> currentDelta{ 0,0 };
 	std::vector<AccumMove>nonAckMoves;
 	int currentMoveId=0;
 	bool end = false; //finalizar programa
@@ -67,7 +68,8 @@ int main() {
 			int aCriticalId = 0;
 			std::pair<short, short>someCoords = { 0,0 };
 			OutputMemoryBitStream ombs;
-
+			//Client* aClient = nullptr;
+			int anIndex=0;
 			switch (command) {
 			case PacketType::WELCOME:
 				imbs.Read(&myId,playerSizeBits);
@@ -137,8 +139,17 @@ int main() {
 					imbs.Read(&leaverId, playerSizeBits);
 
 					acks.push_back(aCriticalId);
-					if (GetClientWithId(aCriticalId,aClients) != nullptr) {
+					anIndex = GetIndexClientWithId(leaverId,&aClients);
+					//aClient = GetClientWithId(leaverId, aClients);
+					//if (aClient!=nullptr) {
+					//	std::cout << "Player " << leaverId << " Disconnected\n";
+					//	
+					//}
+					if (anIndex != -1) {
+						aClients.erase(aClients.begin() + anIndex);
+						playerRenders.erase(playerRenders.begin()+anIndex);
 						std::cout << "Player " << leaverId << " Disconnected\n";
+
 					}
 					else {
 						std::cout << "Trying to disconnect non existing player with id " << leaverId << std::endl;
@@ -167,6 +178,7 @@ int main() {
 
 					if (aPlayerId == myId) {
 						myCoordenates = someCoords;
+						auxPosition = myCoordenates;
 					}
 
 				}
@@ -199,7 +211,6 @@ int main() {
 		if (window.isOpen()) {
 			sf::Event event;
 
-			//Este primer WHILE es para controlar los eventos del mouse
 			while (window.pollEvent(event))
 			{
 				switch (event.type)
@@ -213,114 +224,42 @@ int main() {
 						//socket->send(pckLeft, serverIp, serverPort);
 						int deltaX = -1;
 						int deltaY = 0;
-						auxPosition.first+=deltaX;
-						AccumMove move;
-						move.absolute = auxPosition;
-						//std::cout << "ENVIANDO AUX " << auxPosition.first << ", " << auxPosition.second << "\n";
-						move.idMove = currentMoveId;
-						currentMoveId++;
-						nonAckMoves.push_back(move);
-						OutputMemoryBitStream ombs;
-						ombs.Write(PacketType::MOVE, commandBits);
-						ombs.Write(move.idMove,criticalBits);
-						ombs.Write(deltaX, deltaMoveBits);
-						ombs.Write(deltaY, deltaMoveBits);
-						ombs.Write(auxPosition.first, coordsbits);
-						ombs.Write(auxPosition.second, coordsbits);
-						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
-
-						if (status == sf::Socket::Error) {
-							std::cout << "ERROR ENVIANDO MOVE\n";
-						}
-
+						auxPosition.first+=deltaX;						
+						currentDelta.first += deltaX;
 					}
 					else if (event.key.code == sf::Keyboard::Right)
 					{
 						int deltaX = 1;
 						int deltaY = 0;
 						auxPosition.first += deltaX;
-						AccumMove move;
-						move.absolute = auxPosition;
-						//std::cout << "ENVIANDO AUX " << auxPosition.first << ", " << auxPosition.second << "\n";
-						move.idMove = currentMoveId;
-						currentMoveId++;
-						nonAckMoves.push_back(move);
-						OutputMemoryBitStream ombs;
-						ombs.Write(PacketType::MOVE, commandBits);
-						ombs.Write(move.idMove, criticalBits);
-						ombs.Write(deltaX, deltaMoveBits);
-						ombs.Write(deltaY, deltaMoveBits);
-						ombs.Write(auxPosition.first, coordsbits);
-						ombs.Write(auxPosition.second, coordsbits);
-						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
-
-						if (status == sf::Socket::Error) {
-							std::cout << "ERROR ENVIANDO MOVE\n";
-						}
+						currentDelta.first += deltaX;
 					}
 					else if (event.key.code == sf::Keyboard::Up) {
 						int deltaX = 0;
 						int deltaY = -1;
 						auxPosition.second+= deltaY;
-						AccumMove move;
-						move.absolute = auxPosition;
-						//std::cout << "ENVIANDO AUX " << auxPosition.first << ", " << auxPosition.second << "\n";
-						move.idMove = currentMoveId;
-						currentMoveId++;
-						nonAckMoves.push_back(move);
-						OutputMemoryBitStream ombs;
-						ombs.Write(PacketType::MOVE, commandBits);
-						ombs.Write(move.idMove, criticalBits);
-						ombs.Write(deltaX, deltaMoveBits);
-						ombs.Write(deltaY, deltaMoveBits);
-						ombs.Write(auxPosition.first, coordsbits);
-						ombs.Write(auxPosition.second, coordsbits);
-						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
-
-						if (status == sf::Socket::Error) {
-							std::cout << "ERROR ENVIANDO MOVE\n";
-						}
+						currentDelta.second += deltaY;
 					}
 					else if (event.key.code == sf::Keyboard::Down) {
-
 						int deltaX = 0;
 						int deltaY = 1;
 						auxPosition.second += deltaY;
-						AccumMove move;
-						move.absolute = auxPosition;
-						//std::cout << "ENVIANDO AUX " << auxPosition.first << ", " << auxPosition.second << "\n";
-						move.idMove = currentMoveId;
-						currentMoveId++;
-						nonAckMoves.push_back(move);
-						OutputMemoryBitStream ombs;
-						ombs.Write(PacketType::MOVE, commandBits);
-						ombs.Write(move.idMove, criticalBits);
-						ombs.Write(deltaX, deltaMoveBits);
-						ombs.Write(deltaY, deltaMoveBits);
-						ombs.Write(auxPosition.first, coordsbits);
-						ombs.Write(auxPosition.second, coordsbits);
-						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
-
-						if (status == sf::Socket::Error) {
-							std::cout << "ERROR ENVIANDO MOVE\n";
-						}
+						currentDelta.second+=deltaY;
 					}
 					break;
-
 				default:
 					break;
-
 				}
 			}
 
 
 			window.clear();
 
-			sf::RectangleShape rectBlanco(sf::Vector2f(1, 600));
-			rectBlanco.setFillColor(sf::Color::White);
-			rectBlanco.setPosition(sf::Vector2f(200, 0));
-			window.draw(rectBlanco);
-			rectBlanco.setPosition(sf::Vector2f(600, 0));
+			//sf::RectangleShape rectBlanco(sf::Vector2f(1, 600));
+			//rectBlanco.setFillColor(sf::Color::White);
+			//rectBlanco.setPosition(sf::Vector2f(200, 0));
+			//window.draw(rectBlanco);
+			//rectBlanco.setPosition(sf::Vector2f(600, 0));
 			//window.draw(rectBlanco);
 
 			//sf::RectangleShape rectAvatar(sf::Vector2f(60, 60));
@@ -328,16 +267,38 @@ int main() {
 			//rectAvatar.setPosition(sf::Vector2f(myCoordenates.first, myCoordenates.second));
 			//window.draw(rectAvatar);
 
+
+			if (clock.getElapsedTime().asMilliseconds() > 120&&connected) {
+				if (currentDelta.first != 0 || currentDelta.second != 0) {
+					AccumMove move;
+					move.absolute = auxPosition;
+					//std::cout << "ENVIANDO AUX " << auxPosition.first << ", " << auxPosition.second << "\n";
+					move.idMove = currentMoveId;
+					currentMoveId++;
+					nonAckMoves.push_back(move);
+					OutputMemoryBitStream ombs;
+					ombs.Write(PacketType::MOVE, commandBits);
+					ombs.Write(move.idMove, criticalBits);
+					ombs.Write(currentDelta.first, deltaMoveBits);
+					ombs.Write(currentDelta.second, deltaMoveBits);
+					ombs.Write(auxPosition.first, coordsbits);
+					ombs.Write(auxPosition.second, coordsbits);
+					status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+					if (status == sf::Socket::Error) {
+						std::cout << "ERROR ENVIANDO MOVE\n";
+					}
+					currentDelta = { 0,0 };
+				}
+				clock.restart();
+			}
+
+			//DRAW DE PERSONAJES
 			for (int i = 0; i < aClients.size(); i++) {
 				//sf::RectangleShape rectAvatar(sf::Vector2f(60, 60));
 				playerRenders[i].setFillColor(sf::Color::Green);
 				playerRenders[i].setPosition(sf::Vector2f(aClients[i]->position.first, aClients[i]->position.second));
 				window.draw(playerRenders[i]);
 			}
-
-
-
-
 
 			window.display();
 

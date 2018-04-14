@@ -57,8 +57,8 @@ int main() {
 
 			switch (command) {
 			case HELLO:
-				coords.first = rand() % 800;
-				coords.second = rand() % 600;
+				coords.first = rand() % 740;
+				coords.second = rand() % 540;
 
 				for (int i = 0; i < aClients.size(); i++) {
 					if (aClients[i]->GetIP() == remoteIP&&aClients[i]->GetPort() == remotePort) {
@@ -181,7 +181,7 @@ int main() {
 					imbs.Read(&accumMove.delta.second, deltaMoveBits);
 					imbs.Read(&accumMove.absolute.first, coordsbits);
 					imbs.Read(&accumMove.absolute.second, coordsbits);
-					std::cout << "Recibido accumMove de jugador ID " << aClient->id << " que tiene delta = " << accumMove.delta.first << ", " << accumMove.delta.second << " y absolute = " << accumMove.absolute.first << ", " <<  accumMove.absolute.second << std::endl;;
+					//std::cout << "Recibido accumMove de jugador ID " << aClient->id << " que tiene delta = " << accumMove.delta.first << ", " << accumMove.delta.second << " y absolute = " << accumMove.absolute.first << ", " <<  accumMove.absolute.second << std::endl;;
 					//acumulatedMoves.push_back(accumMove);
 					aClient->acumulatedMoves.push_back(accumMove);
 				}
@@ -205,7 +205,7 @@ int main() {
 
 
 		for (int i = 0; i < aClients.size(); i++) {
-			if (aClients[i]->pingCounter.getElapsedTime().asMilliseconds() > 30000) {
+			if (aClients[i]->pingCounter.getElapsedTime().asMilliseconds() > 10000) {
 				std::cout << "Player with id " << aClients[i]->GetID() << " timeOut " << aClients[i]->pingCounter.getElapsedTime().asMilliseconds() << std::endl;;
 				DisconnectPlayer(&aClients, aClients[i]);
 			}
@@ -220,27 +220,55 @@ int main() {
 							latestMessageIndex = j;
 						}
 					}
-					ombs.Write(PacketType::ACKMOVE, commandBits);
-					ombs.Write(aClients[i]->id, playerSizeBits);
-					ombs.Write(latestMessageIndex, criticalBits);
-					//ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].delta.first,deltaMoveBits);
-					//ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].delta.second, deltaMoveBits);
+
+					if ((aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first + 60) < 800 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first)>0&&(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second+60)<600 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second)>0) {
+						ombs.Write(PacketType::ACKMOVE, commandBits);
+						ombs.Write(aClients[i]->id, playerSizeBits);
+						ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].idMove, criticalBits);
+						//ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].delta.first,deltaMoveBits);
+						//ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].delta.second, deltaMoveBits);
 
 
-					ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first, coordsbits);
-					ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second, coordsbits);
-					aClients[i]->position = aClients[i]->acumulatedMoves[latestMessageIndex].absolute;
-					aClients[i]->acumulatedMoves.clear();
+						ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first, coordsbits);
+						ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second, coordsbits);
+						aClients[i]->position = aClients[i]->acumulatedMoves[latestMessageIndex].absolute;
+						aClients[i]->acumulatedMoves.clear();
 
-					std::cout << "Enviada posicion de jugador con ID " << aClients[i]->GetID() << ".Sus coordenadas son " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first<< ", " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second << "\n";
+						std::cout << "Enviada posicion de jugador con ID " << aClients[i]->GetID() << ".Sus coordenadas son " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first << ", " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second << "\n";
 
 
-					for (int j = 0; j < aClients.size(); j++) {
-						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), aClients[j]->GetIP(), aClients[j]->GetPort());
-						if (status == sf::Socket::Error) {
-							std::cout << "ERROR ENVIANDO ACTUALIZACION DE POSICION\n";
+						for (int j = 0; j < aClients.size(); j++) {
+							status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), aClients[j]->GetIP(), aClients[j]->GetPort());
+							if (status == sf::Socket::Error) {
+								std::cout << "ERROR ENVIANDO ACTUALIZACION DE POSICION\n";
+							}
 						}
 					}
+					else {
+						ombs.Write(PacketType::ACKMOVE, commandBits);
+						ombs.Write(aClients[i]->id, playerSizeBits);
+						ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].idMove, criticalBits);
+						//ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].delta.first,deltaMoveBits);
+						//ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].delta.second, deltaMoveBits);
+
+
+						ombs.Write(aClients[i]->position.first, coordsbits);
+						ombs.Write(aClients[i]->position.second, coordsbits);
+						//aClients[i]->position = aClients[i]->acumulatedMoves[latestMessageIndex].absolute;
+						aClients[i]->acumulatedMoves.clear();
+
+						std::cout << "Enviada posicion de jugador con ID " << aClients[i]->GetID() << ".Sus coordenadas son " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first << ", " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second << "\n";
+
+
+						for (int j = 0; j < aClients.size(); j++) {
+							status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), aClients[j]->GetIP(), aClients[j]->GetPort());
+							if (status == sf::Socket::Error) {
+								std::cout << "ERROR ENVIANDO ACTUALIZACION DE POSICION\n";
+							}
+						}
+					}
+
+
 				}
 				aClients[i]->moveClock.restart();
 			}

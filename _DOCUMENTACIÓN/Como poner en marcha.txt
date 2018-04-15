@@ -1,0 +1,7 @@
+El proyecto funciona mucho mejor en Release pero compila tambien en Debug.
+
+Para hacer que funcione deben compilarse los tres proyectos asociados a la solución y copiar los archivos .dll de deps64 a la correspondiente carpeta (Release o Debug)
+Una vez hecho esto, se debe ejecutar Taller6_Server.exe (IGNORAR EL NOMBRE) y acto seguido ejecutar los clientes que se deseen (Puede haber hasta 4, un intento de conectar un 5 jugador resultara en
+que este ultimo recibirá un mensaje que le hará cerrarse además de notificarle que el servidor esta lleno, los clientes que se conecten con éxito pueden moverse por el mapa (sin salirse de la pantalla)
+ya que el servidor valida los movimientos. La desconexión de uno de los cleintes resultará en que, pasado cierto tiempo, el servidor echará a dicho jugador de su lista y notificará a los demás jugadores 
+de dicha desconexión, haciendo que dejen de renderizar su rectángulo.

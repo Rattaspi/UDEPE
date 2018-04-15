@@ -289,7 +289,15 @@ int main() {
 					ombs.Write(currentDelta.second, deltaMoveBits);
 					ombs.Write(auxPosition.first, coordsbits);
 					ombs.Write(auxPosition.second, coordsbits);
+
+					int lossRate = LOSSRATE
+					if ((int)(rand() % 100) > lossRate) {
 					status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+					}
+					else {
+						std::cout << "Move perdido a posta\n";
+					}
+					
 					if (status == sf::Socket::Error) {
 						std::cout << "ERROR ENVIANDO MOVE\n";
 					}

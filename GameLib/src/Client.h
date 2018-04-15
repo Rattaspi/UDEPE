@@ -5,7 +5,7 @@
 #include "OutputMemoryBitStream.h"
 #include <mutex>
 
-#define LOSSRATE 0;
+#define LOSSRATE 25;
 
 class AccumMove {
 public:

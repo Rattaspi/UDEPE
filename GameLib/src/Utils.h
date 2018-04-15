@@ -25,11 +25,14 @@ void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 }
 
 ServerClient* GetClientWithIpPort(unsigned short port, std::string ip, std::vector<ServerClient*>*aClients) {
+	int playerSize = 0;
 	for (int i = 0; i < aClients->size(); i++) {
 		if (aClients->at(i)->GetIP() == ip&&aClients->at(i)->GetPort() == port) {
 			return aClients->at(i);
+			playerSize++;
 		}
 	}
+	std::cout << "JUGADORES PROCESADOS-> " << playerSize << std::endl;
 	return nullptr;
 }
 

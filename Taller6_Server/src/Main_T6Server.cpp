@@ -51,7 +51,7 @@ int main() {
 			sf::Socket::Status status;
 			bool exists = false;
 			ServerClient* aClient;
-			int aCriticalId = 0 ;
+			int aCriticalId = 0;
 			int repeatingId = 0;
 			std::pair<short, short> coords;
 
@@ -234,7 +234,7 @@ int main() {
 						aClients[i]->position = aClients[i]->acumulatedMoves[latestMessageIndex].absolute;
 						aClients[i]->acumulatedMoves.clear();
 
-						std::cout << "Enviada posicion de jugador con ID " << aClients[i]->GetID() << ".Sus coordenadas son " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first << ", " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second << "\n";
+						//std::cout << "Enviada posicion de jugador con ID " << aClients[i]->GetID() << ".Sus coordenadas son " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first << ", " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second << "\n";
 
 
 						for (int j = 0; j < aClients.size(); j++) {
@@ -257,7 +257,7 @@ int main() {
 						//aClients[i]->position = aClients[i]->acumulatedMoves[latestMessageIndex].absolute;
 						aClients[i]->acumulatedMoves.clear();
 
-						std::cout << "Enviada posicion de jugador con ID " << aClients[i]->GetID() << ".Sus coordenadas son " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first << ", " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second << "\n";
+						//std::cout << "Enviada posicion de jugador con ID " << aClients[i]->GetID() << ".Sus coordenadas son " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first << ", " << aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second << "\n";
 
 
 						for (int j = 0; j < aClients.size(); j++) {
@@ -337,9 +337,10 @@ void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClien
 	int disconnectedId = aClient->GetID();
 	int disconnectedIndex=GetIndexClientWithId(disconnectedId,aClients);
 
-	if (disconnectedIndex > 0) {
+	if (disconnectedIndex > -1) {
 		std::cout << "Erasing client with Id" << disconnectedId << std::endl;
 		aClients->erase(aClients->begin() + disconnectedIndex);
+		std::cout << "PlayerSize: " << aClients->size()<<"\n";
 
 		for (int i = 0; i < aClients->size(); i++) {
 			OutputMemoryBitStream ombs;

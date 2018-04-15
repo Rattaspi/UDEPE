@@ -183,7 +183,7 @@ int main() {
 
 				}
 
-				std::cout << "Recibida posicion de jugador con ID " <<aPlayerId<< ".Sus coordenadas son "<<someCoords.first<<", "<<someCoords.second<<"\n";
+				//std::cout << "Recibida posicion de jugador con ID " <<aPlayerId<< ".Sus coordenadas son "<<someCoords.first<<", "<<someCoords.second<<"\n";
 
 		/*		
 				
@@ -245,6 +245,12 @@ int main() {
 						int deltaY = 1;
 						auxPosition.second += deltaY;
 						currentDelta.second+=deltaY;
+					}
+					else if (event.key.code == sf::Keyboard::Escape) {
+						std::cout << "Application Closed\n";
+						window.close();
+						connected = false;
+						end = true;
 					}
 					break;
 				default:

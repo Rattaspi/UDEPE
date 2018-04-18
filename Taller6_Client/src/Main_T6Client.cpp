@@ -11,6 +11,10 @@ void ReceptionThread(bool* end, std::queue<Event>* incomingInfo, sf::UdpSocket* 
 
 bool ClientExists(std::vector<Client*>aClients,int id);
 
+bool CheckValidMoveId(std::vector<AccumMove>*nonAckMoves, int aCriticalId, std::pair<short,short>someCoords,int* index);
+
+void EraseAccums(std::vector<AccumMove>*nonAckMoves, int until);
+
 int main() {
 	std::cout << "CLIENTE INICIADO" << std::endl;
 	std::string serverIp = "localhost";
@@ -169,18 +173,55 @@ int main() {
 				AccumMove accumMove;
 				Client* aClient = GetClientWithId(aPlayerId,aClients);
 
-				if (aClient != nullptr) {
-					aClient->position = someCoords;
-					if (aPlayerId == myId) {
-						myCoordenates = someCoords;
-						auxPosition = myCoordenates;
+				if (aClient != nullptr) { //Si no es nullptr no eres tu mismo.
+					//aClient->position = someCoords;
+
+					std::pair<float, float>distance;
+					std::pair <short, short>lastPosition;
+					if (aClient->steps.size() > 0) {
+						 lastPosition = aClient->steps.back();
+					}
+					else {
+						lastPosition = aClient->position;
 					}
 
-				}
-				else if (aPlayerId == myId) {
-					myCoordenates = someCoords;
-					auxPosition = myCoordenates;
-					std::cout << "MY NEW COORDS: " << myCoordenates.first << ", " << myCoordenates.second << std::endl;
+					
+
+					distance.first = (someCoords.first - lastPosition.first);
+					distance.second = someCoords.second - lastPosition.second;
+					distance.first /= subdividedSteps;
+					distance.second /= subdividedSteps;
+					std::cout << "someCoords -> " << someCoords.first << ", " << someCoords.second << " - lastPosition "<<lastPosition.first << ", " << lastPosition.second <<"\n";
+					
+
+					for (int i = 0; i < subdividedSteps; i++) {
+						std::pair<short, short>aStep;
+						aStep.first = lastPosition.first + (short)std::floor(distance.first*i);
+						aStep.second = lastPosition.second + (short)std::floor(distance.second*i);
+
+						//std::cout << std::floor(distance.first*i)<<"\n";
+
+						aClient->steps.push(aStep);
+						std::cout << "Pushing step with coords-> " << aStep.first << ", " << aStep.second << "\n";
+					}
+					/*	if (aPlayerId == myId) {
+						myCoordenates = someCoords;
+						auxPosition = myCoordenates;
+					}*/
+
+				}else if (aPlayerId == myId) {
+					int ackIndex = 0;
+					if (!CheckValidMoveId(&nonAckMoves, aCriticalId, someCoords, &ackIndex)) {
+						myCoordenates = someCoords;
+						auxPosition = myCoordenates;
+						//std::cout << "MY NEW COORDS: " << myCoordenates.first << ", " << myCoordenates.second << std::endl;
+						EraseAccums(&nonAckMoves, (int)(nonAckMoves.size() - 1));
+						//std::cout << "NonAckMoves-> " << nonAckMoves.size()<<std::endl;
+					}
+					else {
+						EraseAccums(&nonAckMoves, ackIndex);
+						//std::cout << "NonAckMoves-> " << nonAckMoves.size() << std::endl;
+					}
 				}
 
 				//std::cout << "Recibida posicion de jugador con ID " <<aPlayerId<< ".Sus coordenadas son "<<someCoords.first<<", "<<someCoords.second<<"\n";
@@ -226,6 +267,7 @@ int main() {
 						int deltaY = 0;
 						auxPosition.first+=deltaX;						
 						currentDelta.first += deltaX;
+						myCoordenates = auxPosition;
 					}
 					else if (event.key.code == sf::Keyboard::Right)
 					{
@@ -233,18 +275,21 @@ int main() {
 						int deltaY = 0;
 						auxPosition.first += deltaX;
 						currentDelta.first += deltaX;
+						myCoordenates = auxPosition;
 					}
 					else if (event.key.code == sf::Keyboard::Up) {
 						int deltaX = 0;
 						int deltaY = -1;
 						auxPosition.second+= deltaY;
 						currentDelta.second += deltaY;
+						myCoordenates = auxPosition;
 					}
 					else if (event.key.code == sf::Keyboard::Down) {
 						int deltaX = 0;
 						int deltaY = 1;
 						auxPosition.second += deltaY;
 						currentDelta.second+=deltaY;
+						myCoordenates = auxPosition;
 					}
 					else if (event.key.code == sf::Keyboard::Escape) {
 						std::cout << "Application Closed\n";
@@ -306,6 +351,13 @@ int main() {
 				clock.restart();
 			}
 
+			for (int i = 0; i < aClients.size(); i++) {
+				if (aClients[i]->steps.size() > 0) {
+					aClients[i]->position = aClients[i]->steps.front();
+					aClients[i]->steps.pop();
+				}
+			}
+
 			//DRAW DE PERSONAJES
 			for (int i = 0; i < aClients.size(); i++) {
 				//sf::RectangleShape rectAvatar(sf::Vector2f(60, 60));
@@ -342,6 +394,25 @@ int main() {
 	return 0;
 }
 
+void EraseAccums(std::vector<AccumMove>*nonAckMoves, int until) {
+	nonAckMoves->erase(nonAckMoves->begin(), nonAckMoves->begin() + until);
+}
+
+bool CheckValidMoveId(std::vector<AccumMove>*nonAckMoves, int aCriticalId, std::pair<short, short>someCoords, int* index) {
+	for (int i = 0; i < nonAckMoves->size(); i++) {
+		if (nonAckMoves->at(i).idMove == aCriticalId) {
+			*index = i;
+			if (someCoords == nonAckMoves->at(i).absolute) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+	}
+	*index = -1;
+	return true;
+}
 
 bool ClientExists(std::vector<Client*>aClients,int id) {
 	for (int i = 0; i < aClients.size(); i++) {

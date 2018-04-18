@@ -4,6 +4,7 @@
 #include <SFML\Network.hpp>
 #include "OutputMemoryBitStream.h"
 #include <mutex>
+#include <queue>
 
 #define LOSSRATE 25;
 
@@ -66,6 +67,7 @@ class Client {
 public:
 	std::string userName;
 	std::pair<short, short> position;
+	std::queue<std::pair<short, short>>steps; //Esto solo lo usan clientes
 	int id;
 	//unsigned int id;
 	Client() {

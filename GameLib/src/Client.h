@@ -51,9 +51,14 @@ public:
 	uint32_t messageSize;
 	char* message;
 	CriticalMessage(int criticalId, char* message, uint32_t messageSize) {
+		this->message = new char[messageSize];
 		this->criticalId = criticalId;
-		this->message = message;
+		//this->message = message;
+		strcpy(this->message, message);
 		this->messageSize = messageSize;
+	}
+	~CriticalMessage() {
+		delete this->message;
 	}
 };
 
@@ -123,11 +128,12 @@ public:
 	void AddCriticalMessage(CriticalMessage* critical) {
 		criticalVector.push_back(*critical);
 		criticalId++;
+		std::cout << "Client with id " << id << " raised critialId to " << criticalId << std::endl;
 	}
 
 	void DebugCriticalPackets() {
 		for (int i = 0; i < criticalVector.size(); i++) {
-			std::cout << "CRITICAL PACKET ID-> " << criticalVector[i].criticalId << std::endl;
+			std::cout << "CRITICAL PACKET ID-> " << criticalVector[i].criticalId << "MY PORT IS " << port <<  std::endl;
 		}
 	}
 
@@ -141,6 +147,7 @@ public:
 		sf::Socket::Status status;
 
 		for (int i = 0; i < criticalVector.size(); i++) {
+			std::cout << "Criticals sent to player " << id << "\n";
 			status = socket->send(criticalVector[i].message, criticalVector[i].messageSize, ip, port);
 
 			if (status == sf::Socket::Status::Error) {

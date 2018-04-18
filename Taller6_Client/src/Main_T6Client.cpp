@@ -99,6 +99,7 @@ int main() {
 
 				connected = true;
 				std::cout << "MY ID IS " << myId << std::endl;
+				window.setTitle(std::to_string(socket->getLocalPort()));
 
 				break;
 			case PacketType::PING:
@@ -111,7 +112,7 @@ int main() {
 				for (int i = 0; i < 1; i++) {
 					Client* newPlayer = new Client();
 					imbs.Read(&aCriticalId, criticalBits);
-					std::cout << "Reiciving Critical ID " << aCriticalId<<std::endl;
+					std::cout << "PUSHING ACK WITH ID" << aCriticalId << " NEW PLAYER " << std::endl;
 					imbs.Read(&aPlayerId, playerSizeBits);
 					newPlayer->id = aPlayerId;
 					imbs.Read(&newPlayer->position.first, coordsbits);
@@ -133,13 +134,13 @@ int main() {
 				}
 				break;
 			case PacketType::DISCONNECT:
-				for (int i = 0; i < 1; i++) {
-					int leaverId=0;
+				std::cout << "DISCONNEEEEEEEEEEEEEEEEEEEEEEEEEEEEEECT\n";
 					imbs.Read(&aCriticalId, criticalBits);
-					imbs.Read(&leaverId, playerSizeBits);
+					imbs.Read(&aPlayerId, playerSizeBits);
 
 					acks.push_back(aCriticalId);
-					anIndex = GetIndexClientWithId(leaverId,&aClients);
+					std::cout << "PUSHING ACK WITH ID" << aCriticalId << " DISCONNECTION " << std::endl;
+					anIndex = GetIndexClientWithId(aPlayerId,&aClients);
 					//aClient = GetClientWithId(leaverId, aClients);
 					//if (aClient!=nullptr) {
 					//	std::cout << "Player " << leaverId << " Disconnected\n";
@@ -148,15 +149,12 @@ int main() {
 					if (anIndex != -1) {
 						aClients.erase(aClients.begin() + anIndex);
 						playerRenders.erase(playerRenders.begin()+anIndex);
-						std::cout << "Player " << leaverId << " Disconnected\n";
+						std::cout << "Player " << aPlayerId << " Disconnected\n";
 
 					}
 					else {
-						std::cout << "Trying to disconnect non existing player with id " << leaverId << std::endl;
+						std::cout << "Trying to disconnect non existing player with id " << aPlayerId << std::endl;
 					}
-
-
-				}
 				break;
 			case PacketType::NOTWELCOME:
 				std::cout << "SERVER FULL\n";
@@ -166,21 +164,23 @@ int main() {
 
 				imbs.Read(&aPlayerId, playerSizeBits);
 				imbs.Read(&aCriticalId, criticalBits); //Se lee aCriticalId pero en realidad es el ID del MOVIMIENTO
+				imbs.Read(&someCoords.first, coordsbits);
+				imbs.Read(&someCoords.second, coordsbits);
 				AccumMove accumMove;
 				Client* aClient = GetClientWithId(aPlayerId,aClients);
 
-
-
 				if (aClient != nullptr) {
-					imbs.Read(&someCoords.first, coordsbits);
-					imbs.Read(&someCoords.second, coordsbits);
 					aClient->position = someCoords;
-
 					if (aPlayerId == myId) {
 						myCoordenates = someCoords;
 						auxPosition = myCoordenates;
 					}
 
+				}
+				else if (aPlayerId == myId) {
+					myCoordenates = someCoords;
+					auxPosition = myCoordenates;
+					std::cout << "MY NEW COORDS: " << myCoordenates.first << ", " << myCoordenates.second << std::endl;
 				}
 
 				//std::cout << "Recibida posicion de jugador con ID " <<aPlayerId<< ".Sus coordenadas son "<<someCoords.first<<", "<<someCoords.second<<"\n";
@@ -314,6 +314,11 @@ int main() {
 				window.draw(playerRenders[i]);
 			}
 
+			sf::RectangleShape myRender(sf::Vector2f(60, 60));
+			myRender.setFillColor(sf::Color::Blue);
+			myRender.setPosition(myCoordenates.first, myCoordenates.second);
+			window.draw(myRender);
+
 			window.display();
 
 		}
@@ -329,9 +334,9 @@ int main() {
 	if (window.isOpen()) {
 		window.close();
 	}
-	system("pause");
 	socket->unbind();
 	t.join();
+	system("pause");
 	delete socket;
 	exit(0);
 	return 0;

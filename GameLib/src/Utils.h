@@ -24,7 +24,7 @@ void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 	}
 }
 
-ServerClient* GetClientWithIpPort(unsigned short port, std::string ip, std::vector<ServerClient*>*aClients) {
+ServerClient* GetServerClientWithIpPort(unsigned short port, std::string ip, std::vector<ServerClient*>*aClients) {
 	int playerSize = 0;
 	for (int i = 0; i < aClients->size(); i++) {
 		if (aClients->at(i)->GetIP() == ip&&aClients->at(i)->GetPort() == port) {
@@ -63,7 +63,7 @@ Client* GetClientWithId(int id, std::vector<Client*>aClients) {
 //	}
 //}
 
-int GetIndexClientWithId(int id, std::vector<ServerClient*>*aClients) {
+int GetIndexServerClientWithId(int id, std::vector<ServerClient*>*aClients) {
 
 	for (int i = 0; i < aClients->size(); i++) {
 		if (aClients->at(i)->id == id) {

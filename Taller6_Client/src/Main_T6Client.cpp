@@ -21,7 +21,6 @@ int main() {
 	int serverPort = 50000;
 	sf::Socket::Status status;
 	sf::UdpSocket* socket = new sf::UdpSocket();
-	sf::Packet infoToSend;
 	std::string command;
 	int myId = 0;
 	std::vector<int>acks;
@@ -34,7 +33,8 @@ int main() {
 	bool connected = false; //controla cuando se ha conectado con el servidor
 	std::queue<Event> incomingInfo; //cola de paquetes entrantes
 	std::vector<Client*> aClients;
-	sf::Clock clockForTheServer;
+	sf::Clock clockForTheServer, clockForTheStep, clockForMyMovement;
+	int timeBetweenSteps = 3; //tiempo que tardan en actualizarse las posiciones interpoladas de los otros clientes.
 
 	std::thread t(&ReceptionThread, &end, &incomingInfo, socket);
 
@@ -260,36 +260,39 @@ int main() {
 					window.close();
 					break;
 				case sf::Event::KeyPressed:
-					if (event.key.code == sf::Keyboard::Left)
-					{
-						//socket->send(pckLeft, serverIp, serverPort);
-						int deltaX = -1;
-						int deltaY = 0;
-						auxPosition.first+=deltaX;						
-						currentDelta.first += deltaX;
-						myCoordenates = auxPosition;
-					}
-					else if (event.key.code == sf::Keyboard::Right)
-					{
-						int deltaX = 1;
-						int deltaY = 0;
-						auxPosition.first += deltaX;
-						currentDelta.first += deltaX;
-						myCoordenates = auxPosition;
-					}
-					else if (event.key.code == sf::Keyboard::Up) {
-						int deltaX = 0;
-						int deltaY = -1;
-						auxPosition.second+= deltaY;
-						currentDelta.second += deltaY;
-						myCoordenates = auxPosition;
-					}
-					else if (event.key.code == sf::Keyboard::Down) {
-						int deltaX = 0;
-						int deltaY = 1;
-						auxPosition.second += deltaY;
-						currentDelta.second+=deltaY;
-						myCoordenates = auxPosition;
+					if (clockForMyMovement.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
+						if (event.key.code == sf::Keyboard::Left)
+						{
+							//socket->send(pckLeft, serverIp, serverPort);
+							int deltaX = -1;
+							int deltaY = 0;
+							auxPosition.first += deltaX;
+							currentDelta.first += deltaX;
+							myCoordenates = auxPosition;
+						}
+						else if (event.key.code == sf::Keyboard::Right)
+						{
+							int deltaX = 1;
+							int deltaY = 0;
+							auxPosition.first += deltaX;
+							currentDelta.first += deltaX;
+							myCoordenates = auxPosition;
+						}
+						else if (event.key.code == sf::Keyboard::Up) {
+							int deltaX = 0;
+							int deltaY = -1;
+							auxPosition.second += deltaY;
+							currentDelta.second += deltaY;
+							myCoordenates = auxPosition;
+						}
+						else if (event.key.code == sf::Keyboard::Down) {
+							int deltaX = 0;
+							int deltaY = 1;
+							auxPosition.second += deltaY;
+							currentDelta.second += deltaY;
+							myCoordenates = auxPosition;
+						}
+						clockForMyMovement.restart();
 					}
 					else if (event.key.code == sf::Keyboard::Escape) {
 						std::cout << "Application Closed\n";
@@ -352,9 +355,12 @@ int main() {
 			}
 
 			for (int i = 0; i < aClients.size(); i++) {
-				if (aClients[i]->steps.size() > 0) {
-					aClients[i]->position = aClients[i]->steps.front();
-					aClients[i]->steps.pop();
+				if (clockForTheStep.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
+					if (aClients[i]->steps.size() > 0) {
+						aClients[i]->position = aClients[i]->steps.front();
+						aClients[i]->steps.pop();
+					}
+					clockForTheStep.restart();
 				}
 			}
 

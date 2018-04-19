@@ -282,6 +282,7 @@ int main() {
 
 void ReceptionThread(bool* end, std::queue<Event*>* incomingInfo, sf::UdpSocket* socket) {
 	sf::Socket::Status status;
+	socket->setBlocking(false);
 	while (!*end) {
 		sf::IpAddress incomingIP;
 		unsigned short incomingPort;

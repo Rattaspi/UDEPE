@@ -126,7 +126,7 @@ public:
 	std::pair<short, short> GetPosition() {
 		return position;
 	}
-	//Añade al vector de paquetes criticos un nuevo paquete
+	//Aï¿½ade al vector de paquetes criticos un nuevo paquete
 	void AddCriticalMessage(CriticalMessage* critical) {
 		criticalVector.push_back(*critical);
 		criticalId++;
@@ -204,7 +204,7 @@ public:
 
 		if (actualIndex != -1){
 			criticalVector.erase(criticalVector.begin() + actualIndex);
-			std::cout << "CriticalPacket en posicion " << actualIndex << " borrado con exito\n";
+			//std::cout << "CriticalPacket en posicion " << actualIndex << " borrado con exito\n";
 		}
 
 	}

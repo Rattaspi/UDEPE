@@ -40,7 +40,7 @@ int main() {
 
 	sf::Clock clock;
 
-	sf::RenderWindow window(sf::VideoMode(800, 600), "Sin acumulación en cliente");
+	sf::RenderWindow window(sf::VideoMode(800, 600), "Sin acumulaciï¿½n en cliente");
 	std::vector<sf::RectangleShape> playerRenders;
 
 	while (!end) {
@@ -383,6 +383,7 @@ int main() {
 
 		if (clockForTheServer.getElapsedTime().asMilliseconds() > 30000) {
 			end = true;
+			system("cls");
 			std::cout << "SERVIDOR DESCONECTADOOOO\n";
 			socket->unbind();
 		}
@@ -431,6 +432,7 @@ bool ClientExists(std::vector<Client*>aClients,int id) {
 
 void ReceptionThread(bool* end, std::queue<Event>* incomingInfo, sf::UdpSocket* socket) {
 	sf::Socket::Status status;
+	socket->setBlocking(false);
 	while (!*end) {
 		sf::IpAddress incomingIP;
 		unsigned short incomingPort;

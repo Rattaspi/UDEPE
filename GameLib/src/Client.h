@@ -6,7 +6,7 @@
 #include <mutex>
 #include <queue>
 
-#define LOSSRATE 25;
+#define LOSSRATE 0;
 
 class AccumMove {
 public:

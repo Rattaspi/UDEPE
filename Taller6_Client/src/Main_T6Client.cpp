@@ -176,6 +176,8 @@ int main() {
 				if (aClient != nullptr) { //Si no es nullptr no eres tu mismo.
 					//aClient->position = someCoords;
 
+					std::cout << "Recibido ACKMOVE de jugador con ID " << aPlayerId << "Sus coordenadas son " << someCoords.first <<", "<<someCoords.second<< std::endl;
+
 					std::pair<float, float>distance;
 					std::pair <short, short>lastPosition;
 					if (aClient->steps.size() > 0) {
@@ -191,7 +193,7 @@ int main() {
 					distance.second = someCoords.second - lastPosition.second;
 					distance.first /= subdividedSteps;
 					distance.second /= subdividedSteps;
-					std::cout << "someCoords -> " << someCoords.first << ", " << someCoords.second << " - lastPosition "<<lastPosition.first << ", " << lastPosition.second <<"\n";
+					//std::cout << "someCoords -> " << someCoords.first << ", " << someCoords.second << " - lastPosition "<<lastPosition.first << ", " << lastPosition.second <<"\n";
 					
 
 					for (int i = 0; i < subdividedSteps; i++) {
@@ -199,10 +201,13 @@ int main() {
 						aStep.first = lastPosition.first + (short)std::floor(distance.first*i);
 						aStep.second = lastPosition.second + (short)std::floor(distance.second*i);
 
-						//std::cout << std::floor(distance.first*i)<<"\n";
+						if (aStep.first != lastPosition.first || aStep.second != lastPosition.second) {
 
-						aClient->steps.push(aStep);
-						std::cout << "Pushing step with coords-> " << aStep.first << ", " << aStep.second << "\n";
+							//std::cout << std::floor(distance.first*i)<<"\n";
+							aClient->steps.push(aStep);
+							std::cout << "Pushing step with coords-> " << aStep.first << ", " << aStep.second << "\n";
+
+						}
 					}
 					/*	if (aPlayerId == myId) {
 						myCoordenates = someCoords;
@@ -327,6 +332,11 @@ int main() {
 					AccumMove move;
 					move.absolute = auxPosition;
 					//std::cout << "ENVIANDO AUX " << auxPosition.first << ", " << auxPosition.second << "\n";
+
+					if (currentMoveId > 255) {
+						currentMoveId = 0;
+					}
+
 					move.idMove = currentMoveId;
 					currentMoveId++;
 					nonAckMoves.push_back(move);
@@ -353,15 +363,14 @@ int main() {
 				}
 				clock.restart();
 			}
-
-			for (int i = 0; i < aClients.size(); i++) {
-				if (clockForTheStep.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
-					if (aClients[i]->steps.size() > 0) {
-						aClients[i]->position = aClients[i]->steps.front();
-						aClients[i]->steps.pop();
+			if (clockForTheStep.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
+				for (int i = 0; i < aClients.size(); i++) {
+						if (aClients[i]->steps.size() > 0) {
+							aClients[i]->position = aClients[i]->steps.front();
+							aClients[i]->steps.pop();
+						}
 					}
-					clockForTheStep.restart();
-				}
+				clockForTheStep.restart();
 			}
 
 			//DRAW DE PERSONAJES

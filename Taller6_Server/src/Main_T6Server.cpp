@@ -25,6 +25,7 @@ int main() {
 	bool end = false;
 	std::queue<Event*> incomingInfo; //cola de paquetes entrantes
 	std::vector<std::vector<AccumMoveServer>> acumulatedMoves;
+	std::pair<short, short>initialPositions[4] = { {200,200}, {200,400}, {800,200}, {800,400} };
 
 	if (status != sf::Socket::Done) {
 		std::cout << "No se ha podido vincular al puerto" << std::endl;
@@ -71,7 +72,7 @@ int main() {
 					ombs.Write(PacketType::WELCOME, commandBits);
 
 					if (!exists) {
-						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, coords));
+						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, initialPositions[clientID]));
 						ombs.Write(clientID, playerSizeBits);
 						repeatingId = clientID;
 						clientID++;
@@ -218,7 +219,7 @@ int main() {
 						}
 					}
 
-					if ((aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first + 60) < 800 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first)>0&&(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second+60)<600 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second)>0) {
+					if ((aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first) < 1000 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first)>0&&(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second)<600 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second)>0) {
 						ombs.Write(PacketType::ACKMOVE, commandBits);
 						ombs.Write(aClients[i]->id, playerSizeBits);
 						ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].idMove, criticalBits);

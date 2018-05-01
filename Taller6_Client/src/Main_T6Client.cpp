@@ -27,7 +27,7 @@ int main() {
 	std::pair<short, short> myCoordenates{ 0,0 };
 	std::pair<short, short> auxPosition{ 0,0 };
 	std::pair<short, short> currentDelta{ 0,0 };
-	std::vector<AccumMove>nonAckMoves;
+	std::vector<AccumMove> nonAckMoves;
 	int currentMoveId=0;
 	bool end = false; //finalizar programa
 	bool connected = false; //controla cuando se ha conectado con el servidor
@@ -35,13 +35,17 @@ int main() {
 	std::vector<Client*> aClients;
 	sf::Clock clockForTheServer, clockForTheStep, clockForMyMovement;
 	int timeBetweenSteps = 3; //tiempo que tardan en actualizarse las posiciones interpoladas de los otros clientes.
+	float playerRadius = 20.0f; //radio de los circulos que conforman a los jugadores.
+	int playerSpeed = 1;
+	bool down_key = false, up_key = false, right_key = false, left_key = false;
+
 
 	std::thread t(&ReceptionThread, &end, &incomingInfo, socket);
 
 	sf::Clock clock;
 
-	sf::RenderWindow window(sf::VideoMode(800, 600), "Sin acumulación en cliente");
-	std::vector<sf::RectangleShape> playerRenders;
+	sf::RenderWindow window(sf::VideoMode(1000, 600), "Cliente con ID "+myId);
+	std::vector<sf::CircleShape> playerRenders;
 
 	while (!end) {
 		//CONTROL DE REENVIOS POR HASTA QUE EL SERVIDOR NOS CONFIRMA LA CONEXION
@@ -90,7 +94,7 @@ int main() {
 					if (aClient->id != myId&&myId>0) {
 						std::cout << "Recibiendo cliente preexistente con id " << aClient->id << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
 						aClients.push_back(aClient);
-						sf::RectangleShape playerRender(sf::Vector2f(60, 60));
+						sf::CircleShape playerRender(playerRadius);
 						playerRenders.push_back(playerRender);
 
 					}
@@ -103,15 +107,14 @@ int main() {
 
 				connected = true;
 				std::cout << "MY ID IS " << myId << std::endl;
-				window.setTitle(std::to_string(socket->getLocalPort()));
-
 				break;
+
 			case PacketType::PING:
-				
 				ombs.Write(PacketType::ACKPING, commandBits);
 				socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
 				clockForTheServer.restart();
 				break;
+
 			case PacketType::NEWPLAYER:
 				for (int i = 0; i < 1; i++) {
 					Client* newPlayer = new Client();
@@ -123,7 +126,7 @@ int main() {
 					imbs.Read(&newPlayer->position.second, coordsbits);
 					acks.push_back(aCriticalId);
 
-					sf::RectangleShape playerRender(sf::Vector2f(60, 60));
+					sf::CircleShape playerRender(playerRadius);
 
 					playerRenders.push_back(playerRender);
 
@@ -265,40 +268,19 @@ int main() {
 					window.close();
 					break;
 				case sf::Event::KeyPressed:
-					if (clockForMyMovement.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
-						if (event.key.code == sf::Keyboard::Left)
-						{
-							//socket->send(pckLeft, serverIp, serverPort);
-							int deltaX = -1;
-							int deltaY = 0;
-							auxPosition.first += deltaX;
-							currentDelta.first += deltaX;
-							myCoordenates = auxPosition;
-						}
-						else if (event.key.code == sf::Keyboard::Right)
-						{
-							int deltaX = 1;
-							int deltaY = 0;
-							auxPosition.first += deltaX;
-							currentDelta.first += deltaX;
-							myCoordenates = auxPosition;
-						}
-						else if (event.key.code == sf::Keyboard::Up) {
-							int deltaX = 0;
-							int deltaY = -1;
-							auxPosition.second += deltaY;
-							currentDelta.second += deltaY;
-							myCoordenates = auxPosition;
-						}
-						else if (event.key.code == sf::Keyboard::Down) {
-							int deltaX = 0;
-							int deltaY = 1;
-							auxPosition.second += deltaY;
-							currentDelta.second += deltaY;
-							myCoordenates = auxPosition;
-						}
-						clockForMyMovement.restart();
+					if (event.key.code == sf::Keyboard::Left){
+						left_key = true;
 					}
+					else if (event.key.code == sf::Keyboard::Right){
+						right_key = true;
+					}
+					else if (event.key.code == sf::Keyboard::Up) {
+						up_key = true;
+					}
+					else if (event.key.code == sf::Keyboard::Down) {
+						down_key = true;
+					}
+						
 					else if (event.key.code == sf::Keyboard::Escape) {
 						std::cout << "Application Closed\n";
 						window.close();
@@ -306,11 +288,59 @@ int main() {
 						end = true;
 					}
 					break;
+
+				case sf::Event::KeyReleased:
+					if (event.key.code == sf::Keyboard::Left) {
+						left_key = false;
+					}
+					else if (event.key.code == sf::Keyboard::Right) {
+						right_key = false;
+					}
+					else if (event.key.code == sf::Keyboard::Up) {
+						up_key = false;
+					}
+					else if (event.key.code == sf::Keyboard::Down) {
+						down_key = false;
+					}
+					break;
 				default:
 					break;
 				}
 			}
 
+			//He sacado el control de movimiento fuera del switch de los eventos para poder realizar movimiento lateral.
+			if (clockForMyMovement.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
+				if (up_key) {
+					std::cout << "boyyyyyyyy\n";
+					int deltaX = 0;
+					int deltaY = -playerSpeed;
+					auxPosition.second += deltaY;
+					currentDelta.second += deltaY;
+					myCoordenates = auxPosition;
+				}
+				else if (down_key) {
+					int deltaX = 0;
+					int deltaY = playerSpeed;
+					auxPosition.second += deltaY;
+					currentDelta.second += deltaY;
+					myCoordenates = auxPosition;
+				}
+				if (right_key) {
+					int deltaX = playerSpeed;
+					int deltaY = 0;
+					auxPosition.first += deltaX;
+					currentDelta.first += deltaX;
+					myCoordenates = auxPosition;
+				}
+				else if (left_key) {
+					int deltaX = -playerSpeed;
+					int deltaY = 0;
+					auxPosition.first += deltaX;
+					currentDelta.first += deltaX;
+					myCoordenates = auxPosition;
+				}
+				clockForMyMovement.restart();
+			}
 
 			window.clear();
 
@@ -381,7 +411,7 @@ int main() {
 				window.draw(playerRenders[i]);
 			}
 
-			sf::RectangleShape myRender(sf::Vector2f(60, 60));
+			sf::CircleShape myRender(playerRadius);
 			myRender.setFillColor(sf::Color::Blue);
 			myRender.setPosition(myCoordenates.first, myCoordenates.second);
 			window.draw(myRender);

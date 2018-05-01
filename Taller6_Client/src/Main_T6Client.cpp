@@ -15,6 +15,10 @@ bool CheckValidMoveId(std::vector<AccumMove>*nonAckMoves, int aCriticalId, std::
 
 void EraseAccums(std::vector<AccumMove>*nonAckMoves, int until);
 
+void SetUpMapLines(std::vector<sf::RectangleShape>*);
+
+void DrawMap(std::vector<sf::RectangleShape>*, sf::RenderWindow*);
+
 int main() {
 	std::cout << "CLIENTE INICIADO" << std::endl;
 	std::string serverIp = "localhost";
@@ -35,10 +39,10 @@ int main() {
 	std::vector<Client*> aClients;
 	sf::Clock clockForTheServer, clockForTheStep, clockForMyMovement;
 	int timeBetweenSteps = 3; //tiempo que tardan en actualizarse las posiciones interpoladas de los otros clientes.
-	float playerRadius = 20.0f; //radio de los circulos que conforman a los jugadores.
 	int playerSpeed = 1;
 	bool down_key = false, up_key = false, right_key = false, left_key = false;
-
+	std::vector<sf::RectangleShape> mapLines; //guarda todas las lineas que forman el mapa.
+	SetUpMapLines(&mapLines);
 
 	std::thread t(&ReceptionThread, &end, &incomingInfo, socket);
 
@@ -311,7 +315,6 @@ int main() {
 			//He sacado el control de movimiento fuera del switch de los eventos para poder realizar movimiento lateral.
 			if (clockForMyMovement.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
 				if (up_key) {
-					std::cout << "boyyyyyyyy\n";
 					int deltaX = 0;
 					int deltaY = -playerSpeed;
 					auxPosition.second += deltaY;
@@ -343,6 +346,7 @@ int main() {
 			}
 
 			window.clear();
+			DrawMap(&mapLines, &window);
 
 			//sf::RectangleShape rectBlanco(sf::Vector2f(1, 600));
 			//rectBlanco.setFillColor(sf::Color::White);
@@ -486,5 +490,34 @@ void ReceptionThread(bool* end, std::queue<Event>* incomingInfo, sf::UdpSocket* 
 			incomingInfo->push(Event(message, sizeReceived, incomingIP, incomingPort));
 
 		}
+	}
+}
+
+void SetUpMapLines(std::vector<sf::RectangleShape>* mapLines) {
+	sf::RectangleShape rectangle(sf::Vector2f(1000, 7));
+	rectangle.setFillColor(sf::Color(100, 100, 100, 255));
+	mapLines->push_back(rectangle);//superior
+	
+	rectangle.setPosition(sf::Vector2f(0, 593));
+	mapLines->push_back(rectangle);//inferior
+	
+	rectangle.setSize(sf::Vector2f(200, 7));
+	rectangle.setPosition(sf::Vector2f(7, 0));
+	rectangle.setRotation(90.0f);
+	mapLines->push_back(rectangle); //derecha superior
+	
+	rectangle.setPosition(sf::Vector2f(7, 400));
+	mapLines->push_back(rectangle); //derecha inferior
+	
+	rectangle.setPosition(sf::Vector2f(1000, 0));
+	mapLines->push_back(rectangle); //izquierda superior
+	
+	rectangle.setPosition(sf::Vector2f(1000, 400));
+	mapLines->push_back(rectangle); //izquierda inferior
+}
+
+void DrawMap(std::vector<sf::RectangleShape>* mapLines, sf::RenderWindow* window) {
+	for (int i = 0; i < mapLines->size(); i++) {
+		window->draw(mapLines->at(i));
 	}
 }

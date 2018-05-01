@@ -11,6 +11,7 @@ const int coordsbits = 10;
 const int criticalBits=8;
 const int deltaMoveBits = 8;
 const int subdividedSteps = 12;
+const float playerRadius = 30.0f;
 
 void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 	int index = -1;

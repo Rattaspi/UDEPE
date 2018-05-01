@@ -219,7 +219,7 @@ int main() {
 						}
 					}
 
-					if ((aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first) < 1000 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first)>0&&(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second)<600 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second)>0) {
+					if ((aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first + playerRadius) < 1000 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first)>0&&(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second + playerRadius)<600 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second)>0) {
 						ombs.Write(PacketType::ACKMOVE, commandBits);
 						ombs.Write(aClients[i]->id, playerSizeBits);
 						ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].idMove, criticalBits);

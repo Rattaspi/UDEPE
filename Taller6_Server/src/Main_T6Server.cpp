@@ -13,6 +13,10 @@ void PingThread(bool* end, std::vector<ServerClient*>* aClients, sf::UdpSocket* 
 
 void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClient);
 
+void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std::pair<short, short> ballPos);
+
+void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta);
+
 int main() {
 	sf::Clock criticalClock;
 	srand(time(NULL));
@@ -25,18 +29,29 @@ int main() {
 	bool end = false;
 	std::queue<Event*> incomingInfo; //cola de paquetes entrantes
 	std::vector<std::vector<AccumMoveServer>> acumulatedMoves;
-	std::pair<short, short>initialPositions[4] = { {200,200}, {200,400}, {800,200}, {800,400} };
+
+	std::pair<float, float> ballCoords{ 400,300 };
+	std::pair<float, float>* ballSpeed = new std::pair<float, float>(0, 0);
+	sf::Clock ballClock;
 
 	if (status != sf::Socket::Done) {
 		std::cout << "No se ha podido vincular al puerto" << std::endl;
 		system("pause");
+		delete ballSpeed;
 		exit(0);
 	}
 
 	std::thread t(&ReceptionThread, &end, &incomingInfo, socket);
 	std::thread s(&PingThread, &end, &aClients, socket);
-
+	ballClock.restart();
 	while (!end) {
+
+		if (ballClock.getElapsedTime().asMilliseconds() > 100) {
+			UpdateBall(&ballCoords, ballSpeed, ballClock.getElapsedTime().asSeconds());
+			SendBallPos(&aClients, socket, ballCoords);
+			ballClock.restart();
+		}
+
 		if (!incomingInfo.empty()) {
 			Event infoReceived;
 			sf::IpAddress remoteIP;
@@ -46,7 +61,7 @@ int main() {
 			remoteIP = infoReceived.GetAdress();
 			remotePort = infoReceived.GetPort();
 
-			InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize*8);
+			InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
 			imbs.Read(&command, commandBits);
 			OutputMemoryBitStream ombs;
 			sf::Socket::Status status;
@@ -54,8 +69,8 @@ int main() {
 			ServerClient* aClient;
 			int aCriticalId = 0;
 			int repeatingId = 0;
-			std::pair<short, short> coords;
-
+			std::pair<short, short> coords{ 0,0 };
+			std::pair<short, short> auxCoords{ 0,0 };
 			switch (command) {
 			case HELLO:
 				coords.first = rand() % 740;
@@ -72,7 +87,7 @@ int main() {
 					ombs.Write(PacketType::WELCOME, commandBits);
 
 					if (!exists) {
-						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, initialPositions[clientID]));
+						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, coords));
 						ombs.Write(clientID, playerSizeBits);
 						repeatingId = clientID;
 						clientID++;
@@ -84,7 +99,7 @@ int main() {
 					int aClientSizeMinus = aClients.size();
 					aClientSizeMinus--;
 					ombs.Write(aClientSizeMinus, playerSizeBits);
-				
+
 					for (int i = 0; i < aClients.size(); i++) {
 						ombs.Write(aClients[i]->GetID(), playerSizeBits);
 						ombs.Write(aClients[i]->GetPosition().first, coordsbits);
@@ -120,7 +135,7 @@ int main() {
 					if (exists) {
 						ombs.Write(PacketType::WELCOME, commandBits);
 						ombs.Write(repeatingId, playerSizeBits);
-						
+
 						for (int i = 0; i < 1; i++) {
 							int aClientSizeMinus = aClients.size();
 							aClientSizeMinus--;
@@ -159,7 +174,7 @@ int main() {
 					//imbs.Read(&aCriticalId, criticalBits);
 					//aClient->RemoveCriticalPacket(aCriticalId);
 					std::cout << "Recibido ACK " << aCriticalId << "Del jugador con ID " << aClient->GetID() << std::endl;
-				
+
 				}
 				break;
 			case ACKPING:
@@ -168,6 +183,71 @@ int main() {
 					aClient->pingCounter.restart();
 					std::cout << "Recibido ACKPING de jugador " << aClient->GetID() << std::endl;
 				}
+				break;
+			case SHOOT:
+				std::cout << "SHOOT RECIBIDO\n";
+				aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &aClients);
+
+				coords.first = 0;
+				coords.second = 0;
+				auxCoords.first = 0;
+				auxCoords.second = 0;
+
+				//coords ->Jugador
+				imbs.Read(&coords.first, coordsbits);
+				imbs.Read(&coords.second, coordsbits);
+				coords.first += 15;
+				coords.second += 15;
+
+				//auxCoords ->Pelota en su simulacion
+				imbs.Read(&auxCoords.first, coordsbits);
+				imbs.Read(&auxCoords.second, coordsbits);
+
+				std::cout << "Player Coords: " << coords.first << " , " << coords.second << std::endl;
+				std::cout << "Ball Coords: " << auxCoords.first << ", " << auxCoords.second << std::endl;
+
+				//if (std::sqrt(std::pow(coords.first - auxCoords.first, 2) + (std::pow(coords.second - auxCoords.second, 2))) < 15) {
+				ballSpeed->first = auxCoords.first - coords.first;
+				ballSpeed->second = auxCoords.second - coords.second;
+				std::cout << "resta = " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+
+				if (aClient->shootClock.getElapsedTime().asMilliseconds()>1000) {
+					float magnitude = ballSpeed->first * ballSpeed->first + ballSpeed->second * ballSpeed->second;
+
+					std::cout << "Magnitude = " << magnitude << std::endl;
+					std::cout << "resta = " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+
+					magnitude = std::sqrt(magnitude);
+
+					if (magnitude < 15) {
+
+						aClient->shootClock.restart();
+
+						std::cout << "Raiz Magnitude = " << magnitude << std::endl;
+
+
+						ballSpeed->first /= magnitude;
+						ballSpeed->second /= magnitude;
+
+						std::cout << "BallSpeed dividida magnitude " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+
+						ballSpeed->first *= 10;
+						ballSpeed->second *= 10;
+
+						std::cout << "BallSpeed dividida magnitude por 10 " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+
+
+						//ballSpeed.first = std::floor(ballSpeed.first);
+						//ballSpeed.second = std::floor(ballSpeed.second);
+
+						//std::cout << "Recibido Shoot, new BallSpeed = " << ballSpeed.first << ", " << ballSpeed.second << std::endl;
+					}
+				}
+
+				//}
+
+
+
 				break;
 			case MOVE:
 				aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &aClients);
@@ -219,7 +299,7 @@ int main() {
 						}
 					}
 
-					if ((aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first + playerRadius) < 1000 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first)>0&&(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second + playerRadius)<600 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second)>0) {
+					if ((aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first + playerRadius) < 1000 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first)>0 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second + playerRadius)<600 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second)>0) {
 						ombs.Write(PacketType::ACKMOVE, commandBits);
 						ombs.Write(aClients[i]->id, playerSizeBits);
 						ombs.Write(aClients[i]->acumulatedMoves[latestMessageIndex].idMove, criticalBits);
@@ -278,6 +358,7 @@ int main() {
 	s.join();
 	t.join();
 	delete socket;
+	delete ballSpeed;
 	return 0;
 }
 
@@ -295,7 +376,7 @@ void ReceptionThread(bool* end, std::queue<Event*>* incomingInfo, sf::UdpSocket*
 			std::cout << "Error al recibir informacion" << std::endl;
 		}
 		else {
-			incomingInfo->push(new Event(message,sizeReceived,incomingIP, incomingPort));
+			incomingInfo->push(new Event(message, sizeReceived, incomingIP, incomingPort));
 
 		}
 	}
@@ -333,7 +414,7 @@ void PingThread(bool* end, std::vector<ServerClient*>* aClients, sf::UdpSocket* 
 
 void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClient) {
 	int disconnectedId = aClient->GetID();
-	int disconnectedIndex=GetIndexServerClientWithId(disconnectedId,aClients);
+	int disconnectedIndex = GetIndexServerClientWithId(disconnectedId, aClients);
 
 	if (disconnectedIndex > -1) {
 		for (int i = 0; i < aClients->size(); i++) {
@@ -360,115 +441,164 @@ void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClien
 	}
 }
 
+void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std::pair<short, short> ballPos) {
+	OutputMemoryBitStream ombs;
+	ombs.Write(PacketType::MOVEBALL, commandBits);
+
+	std::pair<short, short>tempCoords;
+	tempCoords.first = (short)ballPos.first;
+	tempCoords.second = (short)ballPos.second;
+
+	ombs.Write(tempCoords.first, coordsbits);
+	ombs.Write(tempCoords.second, coordsbits);
+	sf::Socket::Status status;
+	for (int i = 0; i < aClients->size(); i++) {
+		status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), aClients->at(i)->GetIP(), aClients->at(i)->GetPort());
+
+		//if (status == sf::Socket::Done) {
+		//	
+		//}
+		if (status == sf::Socket::Error) {
+			std::cout << "Error de envío de pos de ball\n";
+		}
+
+	}
+}
+
+void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta) {
+	coords->first += speed->first*delta;
+	coords->second += speed->second*delta;
+
+	if (coords->first + ballRadius > 800 && speed->first>0) {
+		coords->first = 800 - ballRadius;
+		speed->first *= -1;
+	}
+	else if (coords->first < -ballRadius&&speed->first<0) {
+		coords->first = ballRadius;
+		speed->first *= -1;
+	}if (coords->second + ballRadius > 600 && speed->second>0) {
+		coords->second = 599 - ballRadius;
+		speed->second *= -1;
+	}
+	else if (coords->second < -ballRadius&&speed->second<0) {
+		coords->second = ballRadius;
+		speed->second *= -1;
+	}
+
+	//std::cout << "New ball pos: " << coords->first <<", " << coords->second<<std::endl;
+}
+
+
 /*				if (command == PacketType::HELLO) {
-					remoteIP = infoReceived.GetAdress();
-					remotePort = infoReceived.GetPort();
-					bool exists = false;
+remoteIP = infoReceived.GetAdress();
+remotePort = infoReceived.GetPort();
+bool exists = false;
 
-					std::cout << "IP: " << remoteIP.toString() << std::endl;
+std::cout << "IP: " << remoteIP.toString() << std::endl;
 
-					for (int i = 0; i < aClients.size(); i++) {
-						if (aClients.at(i)->GetIP() == remoteIP.toString()&&aClients.at(i)->GetPort() == remotePort) {
-							exists = true;
+for (int i = 0; i < aClients.size(); i++) {
+if (aClients.at(i)->GetIP() == remoteIP.toString()&&aClients.at(i)->GetPort() == remotePort) {
+exists = true;
 
-							OutputMemoryBitStream ombs;
-							ombs.Write(PacketType::WELCOME, commandBits);
-							ombs.Write(aClients.at(i)->GetID(), playerSizeBits);
-							ombs.Write(aClients.size()-1, playerSizeBits);
+OutputMemoryBitStream ombs;
+ombs.Write(PacketType::WELCOME, commandBits);
+ombs.Write(aClients.at(i)->GetID(), playerSizeBits);
+ombs.Write(aClients.size()-1, playerSizeBits);
 
-							for (int j = 0; j < aClients.size(); j++) {
+for (int j = 0; j < aClients.size(); j++) {
 
-								ombs.Write(aClients.at(j)->GetID(), playerSizeBits);
+ombs.Write(aClients.at(j)->GetID(), playerSizeBits);
 
-								ombs.Write(aClients.at(j)->GetPosition().first, coordsbits);
-								ombs.Write(aClients.at(j)->GetPosition().second, coordsbits);
+ombs.Write(aClients.at(j)->GetPosition().first, coordsbits);
+ombs.Write(aClients.at(j)->GetPosition().second, coordsbits);
 
-							}
-							socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
+}
+socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
 
-							std::cout << "Se reenvia un welcome a " << remoteIP << ":" << remotePort << std::endl;
+std::cout << "Se reenvia un welcome a " << remoteIP << ":" << remotePort << std::endl;
 
-						}
-					}
-					if (!exists&&clientID<4) {
-						std::cout << "Conexion aceptada " << remoteIP << ":" << remotePort << std::endl;
+}
+}
+if (!exists&&clientID<4) {
+std::cout << "Conexion aceptada " << remoteIP << ":" << remotePort << std::endl;
 
-						short x, y;
-						x = rand() % 600;
-						y = rand() % 400;
-						std::pair<short, short> coordenadasPlayer{ x,y };
-
-
-
-						for (int i = 0; i < aClients.size(); i++) {
-							OutputMemoryBitStream ombs;
-							ombs.Write(PacketType::NEWPLAYER, commandBits);
-							ombs.Write(aClients[i]->GetCriticalId(), criticalBits);
-							ombs.Write(clientID, playerSizeBits);
-							ombs.Write(coordenadasPlayer.first, coordsbits);
-							ombs.Write(coordenadasPlayer.second, coordsbits);
-
-							CriticalPacket aCritical(ombs.GetBufferPtr(),ombs.GetByteLength(), aClients[i]->GetCriticalId());
-							aClients[i]->AddCriticalPacket(aCritical);
-						}
+short x, y;
+x = rand() % 600;
+y = rand() % 400;
+std::pair<short, short> coordenadasPlayer{ x,y };
 
 
-						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, coordenadasPlayer));
-						
 
-						OutputMemoryBitStream ombs;
-						ombs.Write(PacketType::WELCOME, commandBits);
-						ombs.Write(clientID, playerSizeBits);
-						ombs.Write(aClients.size()-1, playerSizeBits);
+for (int i = 0; i < aClients.size(); i++) {
+OutputMemoryBitStream ombs;
+ombs.Write(PacketType::NEWPLAYER, commandBits);
+ombs.Write(aClients[i]->GetCriticalId(), criticalBits);
+ombs.Write(clientID, playerSizeBits);
+ombs.Write(coordenadasPlayer.first, coordsbits);
+ombs.Write(coordenadasPlayer.second, coordsbits);
 
-
-						for (int j = 0; j < aClients.size(); j++) {
-
-							ombs.Write(aClients.at(j)->GetID(), playerSizeBits);
-							ombs.Write(aClients.at(j)->GetPosition().first, coordsbits);
-							ombs.Write(aClients.at(j)->GetPosition().second, coordsbits);
-
-						}
-						socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
-
-						std::cout << "Se reenvia un welcome a " << remoteIP << ":" << remotePort << std::endl;
-						std::cout << "CLIENT ID " << clientID << "\n";
-
-						clientID++;
-					}
+CriticalPacket aCritical(ombs.GetBufferPtr(),ombs.GetByteLength(), aClients[i]->GetCriticalId());
+aClients[i]->AddCriticalPacket(aCritical);
+}
 
 
-				}
-				else if (command == PacketType::ACK) {
-					//int receivedCriticalPlayerID = 0;
-					int receivedCriticalID = 0;
-					imbs.Read(&receivedCriticalID, criticalBits);
-
-					 ServerClient* aClient = nullptr;
-
-					 // aClient = GetClientWithId(receivedCriticalPlayerID, &aClients);
-					  aClient = GetClientWithIpPort(infoReceived.GetPort(), infoReceived.GetAdress().toString(), &aClients);
-
-					  std::cout << "Recibido ACK de client con id" << aClient->GetID() << " y critical con Id " << receivedCriticalID << "\n";
+aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, coordenadasPlayer));
 
 
-					  if (aClient != nullptr) {
-						  aClient->RemoveCriticalPacket(receivedCriticalID);
-					  }
+OutputMemoryBitStream ombs;
+ombs.Write(PacketType::WELCOME, commandBits);
+ombs.Write(clientID, playerSizeBits);
+ombs.Write(aClients.size()-1, playerSizeBits);
 
-				}
-				else if (command == PacketType::ACKPING) {
-					//unsigned int playerID=1;
-					//imbs.Read(&playerID, playerSizeBits);
 
-					//std::cout << "se recibe un Ackping del jugador con id " << playerID << "\n";
-					//GetClientWithId(playerID, &aClients)->pingCounter.restart();
-					ServerClient* tempClient;
-					tempClient = GetClientWithIpPort(infoReceived.GetPort(), infoReceived.GetAdress().toString(), &aClients);
-					if (tempClient != nullptr){
-						tempClient->pingCounter.restart();
-						std::cout << "se recibe un Ackping del jugador con id " << tempClient->GetID() << "\n";
-					}else{
-						std::cout << "NULL POINTER \n";
-					}
-					}*/
+for (int j = 0; j < aClients.size(); j++) {
+
+ombs.Write(aClients.at(j)->GetID(), playerSizeBits);
+ombs.Write(aClients.at(j)->GetPosition().first, coordsbits);
+ombs.Write(aClients.at(j)->GetPosition().second, coordsbits);
+
+}
+socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
+
+std::cout << "Se reenvia un welcome a " << remoteIP << ":" << remotePort << std::endl;
+std::cout << "CLIENT ID " << clientID << "\n";
+
+clientID++;
+}
+
+
+}
+else if (command == PacketType::ACK) {
+//int receivedCriticalPlayerID = 0;
+int receivedCriticalID = 0;
+imbs.Read(&receivedCriticalID, criticalBits);
+
+ServerClient* aClient = nullptr;
+
+// aClient = GetClientWithId(receivedCriticalPlayerID, &aClients);
+aClient = GetClientWithIpPort(infoReceived.GetPort(), infoReceived.GetAdress().toString(), &aClients);
+
+std::cout << "Recibido ACK de client con id" << aClient->GetID() << " y critical con Id " << receivedCriticalID << "\n";
+
+
+if (aClient != nullptr) {
+aClient->RemoveCriticalPacket(receivedCriticalID);
+}
+
+}
+else if (command == PacketType::ACKPING) {
+//unsigned int playerID=1;
+//imbs.Read(&playerID, playerSizeBits);
+
+//std::cout << "se recibe un Ackping del jugador con id " << playerID << "\n";
+//GetClientWithId(playerID, &aClients)->pingCounter.restart();
+ServerClient* tempClient;
+tempClient = GetClientWithIpPort(infoReceived.GetPort(), infoReceived.GetAdress().toString(), &aClients);
+if (tempClient != nullptr){
+tempClient->pingCounter.restart();
+std::cout << "se recibe un Ackping del jugador con id " << tempClient->GetID() << "\n";
+}else{
+std::cout << "NULL POINTER \n";
+}
+}*/
+					//					if ((aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first + playerRadius) < 1000 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.first)>0&&(aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second + playerRadius)<600 && (aClients[i]->acumulatedMoves[latestMessageIndex].absolute.second)>0) {

@@ -31,6 +31,7 @@ int main() {
 	std::pair<short, short> myCoordenates{ 0,0 };
 	std::pair<short, short> auxPosition{ 0,0 };
 	std::pair<short, short> currentDelta{ 0,0 };
+	std::pair<short, short>localBallCoords{ 400,300 };
 	std::vector<AccumMove> nonAckMoves;
 	int currentMoveId=0;
 	bool end = false; //finalizar programa
@@ -39,6 +40,7 @@ int main() {
 	std::vector<Client*> aClients;
 	sf::Clock clockForTheServer, clockForTheStep, clockForMyMovement;
 	int timeBetweenSteps = 3; //tiempo que tardan en actualizarse las posiciones interpoladas de los otros clientes.
+	bool canShoot = true;
 	int playerSpeed = 1;
 	bool down_key = false, up_key = false, right_key = false, left_key = false;
 	std::vector<sf::RectangleShape> mapLines; //guarda todas las lineas que forman el mapa.
@@ -46,6 +48,7 @@ int main() {
 
 	std::thread t(&ReceptionThread, &end, &incomingInfo, socket);
 
+	sf::Clock shootCounter;
 	sf::Clock clock;
 
 	sf::RenderWindow window(sf::VideoMode(1000, 600), "Cliente con ID "+myId);
@@ -171,6 +174,11 @@ int main() {
 				std::cout << "SERVER FULL\n";
 				end = true;
 				break;
+			case PacketType::MOVEBALL:
+				imbs.Read(&someCoords.first, coordsbits);
+				imbs.Read(&someCoords.second, coordsbits);
+				localBallCoords = someCoords;
+				break;
 			case PacketType::ACKMOVE:
 
 				imbs.Read(&aPlayerId, playerSizeBits);
@@ -272,7 +280,26 @@ int main() {
 					window.close();
 					break;
 				case sf::Event::KeyPressed:
-					if (event.key.code == sf::Keyboard::Left){
+					if (event.key.code == sf::Keyboard::Space) {
+						if (shootCounter.getElapsedTime().asMilliseconds()>1000) {
+							shootCounter.restart();
+							std::cout << "SHOOT ENVIADO\n";
+							OutputMemoryBitStream ombs;
+							ombs.Write(PacketType::SHOOT, commandBits);
+							ombs.Write(myCoordenates.first, coordsbits);
+							ombs.Write(myCoordenates.second, coordsbits);
+							ombs.Write(localBallCoords.first, coordsbits);
+							ombs.Write(localBallCoords.second, coordsbits);
+							status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+							if (status == sf::Socket::Error) {
+								std::cout << "Error enviando Shoot\n";
+							}
+							else {
+								std::cout << "Enviando mi posicion: " << myCoordenates.first << ", " << myCoordenates.second << " y posicion bola " << localBallCoords.first << ", " << localBallCoords.second << std::endl;
+							}
+						}
+					}
+					else if (event.key.code == sf::Keyboard::Left){
 						left_key = true;
 					}
 					else if (event.key.code == sf::Keyboard::Right){
@@ -419,6 +446,11 @@ int main() {
 			myRender.setFillColor(sf::Color::Blue);
 			myRender.setPosition(myCoordenates.first, myCoordenates.second);
 			window.draw(myRender);
+
+			sf::CircleShape ballRender(ballRadius);
+			ballRender.setFillColor(sf::Color::Green);
+			ballRender.setPosition(localBallCoords.first,localBallCoords.second);
+			window.draw(ballRender);
 
 			window.display();
 

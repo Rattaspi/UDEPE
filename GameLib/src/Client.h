@@ -100,7 +100,7 @@ private:
 public:
 	std::vector<AccumMoveServer> acumulatedMoves;
 	sf::Clock moveClock;
-
+	sf::Clock shootClock;
 	int criticalId; //para llevar track del id de los mensajes criticos
 	sf::Clock pingCounter;
 	ServerClient(std::string ip, unsigned short port, int id, std::pair<short, short> position) {

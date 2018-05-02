@@ -19,6 +19,8 @@ void SetUpMapLines(std::vector<sf::RectangleShape>*);
 
 void DrawMap(std::vector<sf::RectangleShape>*, sf::RenderWindow*);
 
+void InterpolateBallMovement(std::queue<std::pair<short, short>>*, std::pair<short, short>);
+
 int main() {
 	std::cout << "CLIENTE INICIADO" << std::endl;
 	std::string serverIp = "localhost";
@@ -31,7 +33,7 @@ int main() {
 	std::pair<short, short> myCoordenates{ 0,0 };
 	std::pair<short, short> auxPosition{ 0,0 };
 	std::pair<short, short> currentDelta{ 0,0 };
-	std::pair<short, short>localBallCoords{ 400,300 };
+	std::pair<short, short>localBallCoords{ 500,300 };
 	std::vector<AccumMove> nonAckMoves;
 	int currentMoveId=0;
 	bool end = false; //finalizar programa
@@ -44,12 +46,14 @@ int main() {
 	int playerSpeed = 1;
 	bool down_key = false, up_key = false, right_key = false, left_key = false;
 	std::vector<sf::RectangleShape> mapLines; //guarda todas las lineas que forman el mapa.
+	std::queue<std::pair<short, short>> ballSteps;
+	
 	SetUpMapLines(&mapLines);
 
 	std::thread t(&ReceptionThread, &end, &incomingInfo, socket);
 
 	sf::Clock shootCounter;
-	sf::Clock clock;
+	sf::Clock clock, clockForTheBallMovement;
 
 	sf::RenderWindow window(sf::VideoMode(1000, 600), "Cliente con ID "+myId);
 	std::vector<sf::CircleShape> playerRenders;
@@ -177,7 +181,9 @@ int main() {
 			case PacketType::MOVEBALL:
 				imbs.Read(&someCoords.first, coordsbits);
 				imbs.Read(&someCoords.second, coordsbits);
-				localBallCoords = someCoords;
+				//localBallCoords = someCoords;
+				ballSteps.push(someCoords);
+				InterpolateBallMovement(&ballSteps, localBallCoords);
 				break;
 			case PacketType::ACKMOVE:
 
@@ -372,6 +378,15 @@ int main() {
 				clockForMyMovement.restart();
 			}
 
+			//MOVIMIENTO DE LA PELOTA
+			if (clockForTheBallMovement.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
+				if (ballSteps.size != 0) {
+					localBallCoords = ballSteps.front();
+					ballSteps.pop();
+				}
+				clockForTheBallMovement.restart();
+			}
+
 			window.clear();
 			DrawMap(&mapLines, &window);
 
@@ -434,7 +449,7 @@ int main() {
 				clockForTheStep.restart();
 			}
 
-			//DRAW DE PERSONAJES
+			//DRAW DE PERSONAJES (dependiendo de quien sea se pintará de un color o otro)
 			for (int i = 0; i < aClients.size(); i++) {
 				if (myId == 0 || myId == 1) {
 					if (aClients[i]->id == 2 || aClients[i]->id == 3) {
@@ -457,11 +472,14 @@ int main() {
 				window.draw(playerRenders[i]);
 			}
 
+			//Mi jugador
 			sf::CircleShape myRender(playerRadius);
 			myRender.setFillColor(sf::Color::Blue);
 			myRender.setPosition(myCoordenates.first, myCoordenates.second);
 			window.draw(myRender);
 
+
+			//Pelota
 			sf::CircleShape ballRender(ballRadius);
 			ballRender.setFillColor(sf::Color::Yellow);
 			ballRender.setPosition(localBallCoords.first,localBallCoords.second);
@@ -567,4 +585,40 @@ void DrawMap(std::vector<sf::RectangleShape>* mapLines, sf::RenderWindow* window
 	for (int i = 0; i < mapLines->size(); i++) {
 		window->draw(mapLines->at(i));
 	}
+}
+
+void InterpolateBallMovement(std::queue<std::pair<short, short>>* ballSteps, std::pair<short, short> localBallPos) {
+	std::pair<float, float>distance;
+	std::pair <short, short>lastPosition;
+	if (ballSteps->size() > 0) {
+		lastPosition = ballSteps->back();
+	}
+	else {
+		lastPosition = localBallPos;
+	}
+
+
+	/*
+	distance.first = (someCoords.first - lastPosition.first);
+	distance.second = someCoords.second - lastPosition.second;
+	distance.first /= subdividedSteps;
+	distance.second /= subdividedSteps;
+	//std::cout << "someCoords -> " << someCoords.first << ", " << someCoords.second << " - lastPosition "<<lastPosition.first << ", " << lastPosition.second <<"\n";
+
+
+	for (int i = 0; i < subdividedSteps; i++) {
+		std::pair<short, short>aStep;
+		aStep.first = lastPosition.first + (short)std::floor(distance.first*i);
+		aStep.second = lastPosition.second + (short)std::floor(distance.second*i);
+
+		if (aStep.first != lastPosition.first || aStep.second != lastPosition.second) {
+
+			//std::cout << std::floor(distance.first*i)<<"\n";
+			aClient->steps.push(aStep);
+			std::cout << "Pushing step with coords-> " << aStep.first << ", " << aStep.second << "\n";
+
+		}
+
+	}
+	*/
 }

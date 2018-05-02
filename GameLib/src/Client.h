@@ -91,7 +91,7 @@ public:
 
 };
 
-class ServerClient:public Client{
+class ServerClient : public Client{
 private:
 	std::mutex mut;
 	unsigned short port;

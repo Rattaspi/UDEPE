@@ -29,6 +29,7 @@ int main() {
 	bool end = false;
 	std::queue<Event*> incomingInfo; //cola de paquetes entrantes
 	std::vector<std::vector<AccumMoveServer>> acumulatedMoves;
+	std::pair<short, short>initialPositions[4] = { { 200,200 },{ 200,400 },{ 800,200 },{ 800,400 } }; //formación inicial de los jugadores
 
 	std::pair<float, float> ballCoords{ 400,300 };
 	std::pair<float, float>* ballSpeed = new std::pair<float, float>(0, 0);
@@ -90,7 +91,7 @@ int main() {
 					ombs.Write(PacketType::WELCOME, commandBits);
 
 					if (!exists) {
-						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, coords));
+						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, initialPositions[clientID]));
 						ombs.Write(clientID, playerSizeBits);
 						repeatingId = clientID;
 						clientID++;
@@ -442,11 +443,6 @@ void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClien
 
 		std::cout << "Erasing client with Id" << disconnectedId << std::endl;
 		aClients->erase(aClients->begin() + disconnectedIndex);
-
-
-
-		//std::cout << "PlayerSize: " << aClients->size() << "\n";
-
 	}
 	else {
 		std::cout << "Trying to disconnect someone who does not exist\n";
@@ -481,8 +477,8 @@ void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, 
 	coords->first += speed->first*delta;
 	coords->second += speed->second*delta;
 
-	if (coords->first + ballRadius > 800 && speed->first>0) {
-		coords->first = 800 - ballRadius;
+	if (coords->first + ballRadius > 1000 && speed->first>0) {
+		coords->first = 1000 - ballRadius;
 		speed->first *= -1;
 	}
 	else if (coords->first < -ballRadius&&speed->first<0) {

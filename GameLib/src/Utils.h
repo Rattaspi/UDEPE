@@ -10,10 +10,10 @@ const int playerSizeBits = 3;
 const int coordsbits = 10;
 const int criticalBits=8;
 const int deltaMoveBits = 8;
-const int subdividedSteps = 12;
-const float playerRadius = 30.0f;
-const int ballRadius = 20;
-const int shootStrength = 20;
+const int subdividedSteps = 9;
+const int playerRadius = 20;
+const int ballRadius = 13;
+const int shootStrength = 200;
 
 void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 	int index = -1;

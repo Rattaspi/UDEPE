@@ -39,7 +39,7 @@ int main() {
 	std::queue<Event> incomingInfo; //cola de paquetes entrantes
 	std::vector<Client*> aClients;
 	sf::Clock clockForTheServer, clockForTheStep, clockForMyMovement;
-	int timeBetweenSteps = 3; //tiempo que tardan en actualizarse las posiciones interpoladas de los otros clientes.
+	int timeBetweenSteps = 2; //tiempo que tardan en actualizarse las posiciones interpoladas de los otros clientes.
 	bool canShoot = true;
 	int playerSpeed = 1;
 	bool down_key = false, up_key = false, right_key = false, left_key = false;
@@ -436,8 +436,23 @@ int main() {
 
 			//DRAW DE PERSONAJES
 			for (int i = 0; i < aClients.size(); i++) {
-				//sf::RectangleShape rectAvatar(sf::Vector2f(60, 60));
-				playerRenders[i].setFillColor(sf::Color::Green);
+				if (myId == 0 || myId == 1) {
+					if (aClients[i]->id == 2 || aClients[i]->id == 3) {
+						playerRenders[i].setFillColor(sf::Color::Red);
+					}
+					else {
+						playerRenders[i].setFillColor(sf::Color::Green);
+					}
+				}
+				else {
+					if (aClients[i]->id == 0 || aClients[i]->id == 1) {
+						playerRenders[i].setFillColor(sf::Color::Red);
+					}
+					else {
+						playerRenders[i].setFillColor(sf::Color::Green);
+					}
+				}
+				
 				playerRenders[i].setPosition(sf::Vector2f(aClients[i]->position.first, aClients[i]->position.second));
 				window.draw(playerRenders[i]);
 			}
@@ -448,7 +463,7 @@ int main() {
 			window.draw(myRender);
 
 			sf::CircleShape ballRender(ballRadius);
-			ballRender.setFillColor(sf::Color::Green);
+			ballRender.setFillColor(sf::Color::Yellow);
 			ballRender.setPosition(localBallCoords.first,localBallCoords.second);
 			window.draw(ballRender);
 

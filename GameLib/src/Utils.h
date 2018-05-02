@@ -12,7 +12,8 @@ const int criticalBits=8;
 const int deltaMoveBits = 8;
 const int subdividedSteps = 12;
 const float playerRadius = 30.0f;
-const int ballRadius = 20.0f;
+const int ballRadius = 20;
+const int shootStrength = 20;
 
 void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 	int index = -1;
@@ -28,14 +29,16 @@ void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 }
 
 ServerClient* GetServerClientWithIpPort(unsigned short port, std::string ip, std::vector<ServerClient*>*aClients) {
-	int playerSize = 0;
-	for (int i = 0; i < aClients->size(); i++) {
-		if (aClients->at(i)->GetIP() == ip&&aClients->at(i)->GetPort() == port) {
-			return aClients->at(i);
-			playerSize++;
+	if (aClients->size() > 0) {
+		for (int i = 0; i < aClients->size(); i++) {
+			if (aClients->at(i)->GetIP() == ip&&aClients->at(i)->GetPort() == port) {
+				return aClients->at(i);
+			}
 		}
 	}
-	std::cout << "JUGADORES PROCESADOS-> " << playerSize << std::endl;
+	else {
+		//NO HAY JUGADORES
+	}
 	return nullptr;
 }
 

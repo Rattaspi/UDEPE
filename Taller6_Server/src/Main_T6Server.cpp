@@ -32,12 +32,15 @@ int main() {
 
 	std::pair<float, float> ballCoords{ 400,300 };
 	std::pair<float, float>* ballSpeed = new std::pair<float, float>(0, 0);
+	std::pair<float, float> auxBallSpeed{ 0,0 };
 	sf::Clock ballClock;
 
 	if (status != sf::Socket::Done) {
 		std::cout << "No se ha podido vincular al puerto" << std::endl;
 		system("pause");
+		if (ballSpeed != nullptr)
 		delete ballSpeed;
+
 		exit(0);
 	}
 
@@ -188,83 +191,90 @@ int main() {
 				std::cout << "SHOOT RECIBIDO\n";
 				aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &aClients);
 
-				coords.first = 0;
-				coords.second = 0;
-				auxCoords.first = 0;
-				auxCoords.second = 0;
+				if (aClient != nullptr) {
+					coords.first = 0;
+					coords.second = 0;
+					auxCoords.first = 0;
+					auxCoords.second = 0;
 
-				//coords ->Jugador
-				imbs.Read(&coords.first, coordsbits);
-				imbs.Read(&coords.second, coordsbits);
-				coords.first += 15;
-				coords.second += 15;
+					//coords ->Jugador
+					imbs.Read(&coords.first, coordsbits);
+					imbs.Read(&coords.second, coordsbits);
+					coords.first += playerRadius;
+					coords.second += playerRadius;
 
-				//auxCoords ->Pelota en su simulacion
-				imbs.Read(&auxCoords.first, coordsbits);
-				imbs.Read(&auxCoords.second, coordsbits);
+					//auxCoords ->Pelota en su simulacion
+					imbs.Read(&auxCoords.first, coordsbits);
+					imbs.Read(&auxCoords.second, coordsbits);
 
-				std::cout << "Player Coords: " << coords.first << " , " << coords.second << std::endl;
-				std::cout << "Ball Coords: " << auxCoords.first << ", " << auxCoords.second << std::endl;
+					auxCoords.first += ballRadius;
+					auxCoords.second += ballRadius;
 
-				//if (std::sqrt(std::pow(coords.first - auxCoords.first, 2) + (std::pow(coords.second - auxCoords.second, 2))) < 15) {
-				ballSpeed->first = auxCoords.first - coords.first;
-				ballSpeed->second = auxCoords.second - coords.second;
-				std::cout << "resta = " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+					//if (std::sqrt(std::pow(coords.first - auxCoords.first, 2) + (std::pow(coords.second - auxCoords.second, 2))) < 15) {
+					//ballSpeed->first = auxCoords.first - coords.first;
+					//ballSpeed->second = auxCoords.second - coords.second;
 
-				if (aClient->shootClock.getElapsedTime().asMilliseconds()>1000) {
-					float magnitude = ballSpeed->first * ballSpeed->first + ballSpeed->second * ballSpeed->second;
-
-					std::cout << "Magnitude = " << magnitude << std::endl;
-					std::cout << "resta = " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
-
-					magnitude = std::sqrt(magnitude);
-
-					if (magnitude < 15) {
-
-						aClient->shootClock.restart();
-
-						std::cout << "Raiz Magnitude = " << magnitude << std::endl;
+					auxBallSpeed.first = auxCoords.first - coords.first;
+					auxBallSpeed.second = auxCoords.second - coords.second;
 
 
-						ballSpeed->first /= magnitude;
-						ballSpeed->second /= magnitude;
+					if (aClient->shootClock.getElapsedTime().asMilliseconds() > 1000) {
+						float magnitude = auxBallSpeed.first * auxBallSpeed.first + auxBallSpeed.second * auxBallSpeed.second;
 
-						std::cout << "BallSpeed dividida magnitude " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+						//std::cout << "Magnitude = " << magnitude << std::endl;
+						std::cout << "resta = " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
 
-						ballSpeed->first *= 10;
-						ballSpeed->second *= 10;
+						magnitude = std::sqrt(magnitude);
+						std::cout << "Magnitude = " << magnitude << std::endl;
 
-						std::cout << "BallSpeed dividida magnitude por 10 " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+						if (magnitude < ballRadius + playerRadius + 5) {
+
+							aClient->shootClock.restart();
+
+							std::cout << "Raiz Magnitude = " << magnitude << std::endl;
+							*ballSpeed = auxBallSpeed;
+
+							ballSpeed->first /= magnitude;
+							ballSpeed->second /= magnitude;
+
+							std::cout << "BallSpeed dividida magnitude " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+
+							ballSpeed->first *= shootStrength;
+							ballSpeed->second *= shootStrength;
+
+							std::cout << "BallSpeed dividida magnitude por 10 " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
 
 
-						//ballSpeed.first = std::floor(ballSpeed.first);
-						//ballSpeed.second = std::floor(ballSpeed.second);
+							//ballSpeed.first = std::floor(ballSpeed.first);
+							//ballSpeed.second = std::floor(ballSpeed.second);
 
-						//std::cout << "Recibido Shoot, new BallSpeed = " << ballSpeed.first << ", " << ballSpeed.second << std::endl;
+							//std::cout << "Recibido Shoot, new BallSpeed = " << ballSpeed.first << ", " << ballSpeed.second << std::endl;
+						}
 					}
+
+					//}
+
 				}
-
-				//}
-
-
 
 				break;
 			case MOVE:
-				aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &aClients);
-				if (aClient != nullptr) {
-					AccumMoveServer accumMove;
-					accumMove.playerID = aClient->id;
-					imbs.Read(&accumMove.idMove, criticalBits);
-					imbs.Read(&accumMove.delta.first, deltaMoveBits);
-					imbs.Read(&accumMove.delta.second, deltaMoveBits);
-					imbs.Read(&accumMove.absolute.first, coordsbits);
-					imbs.Read(&accumMove.absolute.second, coordsbits);
-					//std::cout << "Recibido accumMove de jugador ID " << aClient->id << " que tiene delta = " << accumMove.delta.first << ", " << accumMove.delta.second << " y absolute = " << accumMove.absolute.first << ", " <<  accumMove.absolute.second << std::endl;;
-					//acumulatedMoves.push_back(accumMove);
-					aClient->acumulatedMoves.push_back(accumMove);
-				}
-				else {
-					std::cout << "Null player trying to send movemen\n";
+				if (aClients.size() > 0) {
+					aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &aClients);
+					if (aClient != nullptr) {
+						AccumMoveServer accumMove;
+						accumMove.playerID = aClient->id;
+						imbs.Read(&accumMove.idMove, criticalBits);
+						imbs.Read(&accumMove.delta.first, deltaMoveBits);
+						imbs.Read(&accumMove.delta.second, deltaMoveBits);
+						imbs.Read(&accumMove.absolute.first, coordsbits);
+						imbs.Read(&accumMove.absolute.second, coordsbits);
+						//std::cout << "Recibido accumMove de jugador ID " << aClient->id << " que tiene delta = " << accumMove.delta.first << ", " << accumMove.delta.second << " y absolute = " << accumMove.absolute.first << ", " <<  accumMove.absolute.second << std::endl;;
+						//acumulatedMoves.push_back(accumMove);
+						aClient->acumulatedMoves.push_back(accumMove);
+					}
+					else {
+						std::cout << "Null player trying to send movemen\n";
+					}
 				}
 
 				break;
@@ -283,7 +293,7 @@ int main() {
 
 
 		for (int i = 0; i < aClients.size(); i++) {
-			if (aClients[i]->pingCounter.getElapsedTime().asMilliseconds() > 10000) {
+			if (aClients[i]->pingCounter.getElapsedTime().asMilliseconds() > 20000) {
 				std::cout << "Player with id " << aClients[i]->GetID() << " timeOut " << aClients[i]->pingCounter.getElapsedTime().asMilliseconds() << std::endl;;
 				DisconnectPlayer(&aClients, aClients[i]);
 			}
@@ -358,7 +368,9 @@ int main() {
 	s.join();
 	t.join();
 	delete socket;
-	delete ballSpeed;
+	if (ballSpeed != nullptr) {
+		delete ballSpeed;
+	}
 	return 0;
 }
 

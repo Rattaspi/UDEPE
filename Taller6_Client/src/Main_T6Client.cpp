@@ -19,7 +19,7 @@ void SetUpMapLines(std::vector<sf::RectangleShape>*);
 
 void DrawMap(std::vector<sf::RectangleShape>*, sf::RenderWindow*);
 
-void InterpolateBallMovement(std::queue<std::pair<short, short>>*, std::pair<short, short>);
+void InterpolateBallMovement(std::queue<std::pair<short, short>>*, std::pair<short, short>,std::pair<short,short>);
 
 int main() {
 	std::cout << "CLIENTE INICIADO" << std::endl;
@@ -182,8 +182,10 @@ int main() {
 				imbs.Read(&someCoords.first, coordsbits);
 				imbs.Read(&someCoords.second, coordsbits);
 				//localBallCoords = someCoords;
-				ballSteps.push(someCoords);
-				InterpolateBallMovement(&ballSteps, localBallCoords);
+				//ballSteps.push(someCoords);
+
+
+				InterpolateBallMovement(&ballSteps, localBallCoords,someCoords);
 				break;
 			case PacketType::ACKMOVE:
 
@@ -380,7 +382,7 @@ int main() {
 
 			//MOVIMIENTO DE LA PELOTA
 			if (clockForTheBallMovement.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
-				if (ballSteps.size != 0) {
+				if (ballSteps.size() != 0) {
 					localBallCoords = ballSteps.front();
 					ballSteps.pop();
 				}
@@ -587,7 +589,7 @@ void DrawMap(std::vector<sf::RectangleShape>* mapLines, sf::RenderWindow* window
 	}
 }
 
-void InterpolateBallMovement(std::queue<std::pair<short, short>>* ballSteps, std::pair<short, short> localBallPos) {
+void InterpolateBallMovement(std::queue<std::pair<short, short>>* ballSteps, std::pair<short, short> localBallPos,std::pair<short,short>newCoords) {
 	std::pair<float, float>distance;
 	std::pair <short, short>lastPosition;
 	if (ballSteps->size() > 0) {
@@ -596,15 +598,10 @@ void InterpolateBallMovement(std::queue<std::pair<short, short>>* ballSteps, std
 	else {
 		lastPosition = localBallPos;
 	}
-
-
-	/*
-	distance.first = (someCoords.first - lastPosition.first);
-	distance.second = someCoords.second - lastPosition.second;
+	distance.first = (newCoords.first - lastPosition.first);
+	distance.second = newCoords.second - lastPosition.second;
 	distance.first /= subdividedSteps;
 	distance.second /= subdividedSteps;
-	//std::cout << "someCoords -> " << someCoords.first << ", " << someCoords.second << " - lastPosition "<<lastPosition.first << ", " << lastPosition.second <<"\n";
-
 
 	for (int i = 0; i < subdividedSteps; i++) {
 		std::pair<short, short>aStep;
@@ -612,13 +609,8 @@ void InterpolateBallMovement(std::queue<std::pair<short, short>>* ballSteps, std
 		aStep.second = lastPosition.second + (short)std::floor(distance.second*i);
 
 		if (aStep.first != lastPosition.first || aStep.second != lastPosition.second) {
-
-			//std::cout << std::floor(distance.first*i)<<"\n";
-			aClient->steps.push(aStep);
+			ballSteps->push(aStep);
 			std::cout << "Pushing step with coords-> " << aStep.first << ", " << aStep.second << "\n";
-
 		}
-
 	}
-	*/
 }

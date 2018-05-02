@@ -381,7 +381,7 @@ int main() {
 			}
 
 			//MOVIMIENTO DE LA PELOTA
-			if (clockForTheBallMovement.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
+			if (clockForTheBallMovement.getElapsedTime().asMilliseconds() > timeBetweenSteps/2) {
 				if (ballSteps.size() != 0) {
 					localBallCoords = ballSteps.front();
 					ballSteps.pop();
@@ -600,10 +600,10 @@ void InterpolateBallMovement(std::queue<std::pair<short, short>>* ballSteps, std
 	}
 	distance.first = (newCoords.first - lastPosition.first);
 	distance.second = newCoords.second - lastPosition.second;
-	distance.first /= subdividedSteps;
-	distance.second /= subdividedSteps;
+	distance.first /= subdividedSteps*2;
+	distance.second /= subdividedSteps*2;
 
-	for (int i = 0; i < subdividedSteps; i++) {
+	for (int i = 0; i < subdividedSteps*2; i++) {
 		std::pair<short, short>aStep;
 		aStep.first = lastPosition.first + (short)std::floor(distance.first*i);
 		aStep.second = lastPosition.second + (short)std::floor(distance.second*i);

@@ -477,18 +477,18 @@ void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, 
 	coords->first += speed->first*delta;
 	coords->second += speed->second*delta;
 
-	if (coords->first + ballRadius > 1000 && speed->first>0) {
-		coords->first = 1000 - ballRadius;
+	if (coords->first +ballRadius*2 > 1000 && speed->first>0) {
+		coords->first = 999 - ballRadius;
 		speed->first *= -1;
 	}
-	else if (coords->first < -ballRadius&&speed->first<0) {
+	else if (coords->first < ballRadius&&speed->first<0) {
 		coords->first = ballRadius;
 		speed->first *= -1;
-	}if (coords->second + ballRadius > 600 && speed->second>0) {
+	}if (coords->second + ballRadius*2 > 600 && speed->second>0) {
 		coords->second = 599 - ballRadius;
 		speed->second *= -1;
 	}
-	else if (coords->second < -ballRadius&&speed->second<0) {
+	else if (coords->second < ballRadius&&speed->second<0) {
 		coords->second = ballRadius;
 		speed->second *= -1;
 	}

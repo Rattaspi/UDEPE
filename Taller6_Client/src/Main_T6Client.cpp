@@ -21,9 +21,12 @@ void DrawMap(std::vector<sf::RectangleShape>*, sf::RenderWindow*);
 
 void InterpolateBallMovement(std::queue<std::pair<short, short>>*, std::pair<short, short>,std::pair<short,short>);
 
-void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::string serverMessage, sf::RenderWindow* window, sf::Clock*serverMessageClock);
+void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::string* serverMessage, sf::RenderWindow* window, sf::Clock*serverMessageClock);
+
+sf::Font font;
 
 int main() {
+	font.loadFromFile("arial_narrow_7.ttf");
 	std::cout << "CLIENTE INICIADO" << std::endl;
 	std::string serverIp = "localhost";
 	int serverPort = 50000;
@@ -230,7 +233,7 @@ int main() {
 				if (aClient != nullptr) { //Si no es nullptr no eres tu mismo.
 					//aClient->position = someCoords;
 
-					std::cout << "Recibido ACKMOVE de jugador con ID " << aPlayerId << "Sus coordenadas son " << someCoords.first <<", "<<someCoords.second<< std::endl;
+					//std::cout << "Recibido ACKMOVE de jugador con ID " << aPlayerId << "Sus coordenadas son " << someCoords.first <<", "<<someCoords.second<< std::endl;
 
 					std::pair<float, float>distance;
 					std::pair <short, short>lastPosition;
@@ -505,6 +508,8 @@ int main() {
 				window.draw(playerRenders[i]);
 			}
 
+			
+
 			//Mi jugador
 			sf::CircleShape myRender(playerRadius);
 			myRender.setFillColor(sf::Color::Blue);
@@ -518,12 +523,8 @@ int main() {
 			ballRender.setPosition(localBallCoords.first,localBallCoords.second);
 			window.draw(ballRender);
 
-
 			//Render puntuación
-			DrawScores(localScoreLeft, localScoreRight,  serverMessage,  &window, &serverMessageClock);
-
-
-
+			DrawScores(localScoreLeft, localScoreRight, &serverMessage, &window, &serverMessageClock);
 
 			window.display();
 
@@ -604,6 +605,7 @@ void SetUpMapLines(std::vector<sf::RectangleShape>* mapLines) {
 	mapLines->push_back(rectangle);//superior
 	
 	rectangle.setPosition(sf::Vector2f(0, 593));
+	rectangle.setSize(sf::Vector2f(1000, 205));
 	mapLines->push_back(rectangle);//inferior
 	
 	rectangle.setSize(sf::Vector2f(200, 7));
@@ -627,35 +629,40 @@ void DrawMap(std::vector<sf::RectangleShape>* mapLines, sf::RenderWindow* window
 	}
 }
 
-void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::string serverMessage, sf::RenderWindow* window, sf::Clock*serverMessageClock) {
+void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::string* serverMessage, sf::RenderWindow* window, sf::Clock* serverMessageClock) {
 	sf::Text scoreLeftRender;
+	scoreLeftRender.setFont(font);
+	scoreLeftRender.setCharacterSize(80);
 	scoreLeftRender.setString(localScoreLeft);
-	scoreLeftRender.setPosition((window->getSize().x / 4), (window->getSize().y / 8));
-	scoreLeftRender.setScale(10, 10);
+	scoreLeftRender.setPosition(100,650);
 	scoreLeftRender.setFillColor(sf::Color::White);
 	window->draw(scoreLeftRender);
 
 	sf::Text scoreRightRender;
+	scoreRightRender.setFont(font);
+	scoreRightRender.setCharacterSize(80);
 	scoreRightRender.setString(localScoreRight);
-	scoreRightRender.setPosition((window->getSize().x / 4) * 3, (window->getSize().y / 8));
-	scoreRightRender.setScale(10, 10);
+	scoreRightRender.setPosition(800,650);
 	scoreRightRender.setFillColor(sf::Color::White);
 	window->draw(scoreRightRender);
 
+
 	sf::Text serverTextRender;
-	serverTextRender.setString(serverMessage);
-	serverTextRender.setPosition(window->getSize().x / 2, window->getSize().y / 8);
-	serverTextRender.setScale(10, 10);
+	serverTextRender.setFont(font);
+	serverTextRender.setCharacterSize(50);
+	serverTextRender.setString(*serverMessage);
+	serverTextRender.setPosition(window->getSize().x / 4, window->getSize().y / 8);
 	serverTextRender.setFillColor(sf::Color::White);
-	if (serverMessage.size() > 0) {
-		if (serverMessageClock->getElapsedTime().asSeconds() < 5) {
+	if (serverMessage->size() > 0) {
+		if (serverMessageClock->getElapsedTime().asMilliseconds() < 5000) {
 			window->draw(serverTextRender);
 		}
 		else {
-			serverMessage = "";
+			*serverMessage = "";
 			serverMessageClock->restart();
 		}
 	}
+	
 }
 
 void InterpolateBallMovement(std::queue<std::pair<short, short>>* ballSteps, std::pair<short, short> localBallPos,std::pair<short,short>newCoords) {
@@ -679,7 +686,7 @@ void InterpolateBallMovement(std::queue<std::pair<short, short>>* ballSteps, std
 
 		if (aStep.first != lastPosition.first || aStep.second != lastPosition.second) {
 			ballSteps->push(aStep);
-			std::cout << "Pushing step with coords-> " << aStep.first << ", " << aStep.second << "\n";
+			//std::cout << "Pushing step with coords-> " << aStep.first << ", " << aStep.second << "\n";
 		}
 	}
 }

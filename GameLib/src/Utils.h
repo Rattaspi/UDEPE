@@ -20,7 +20,7 @@ const std::pair<short, short> leftGoalBot;
 const std::pair<short, short> rightGoalTop;
 const std::pair<short, short> rightGoalBot;
 const int windowWidth = 1000;
-const int windowHeight = 600;
+const int windowHeight = 800;
 
 void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 	int index = -1;

@@ -59,7 +59,8 @@ public:
 		this->messageSize = messageSize;
 	}
 	~CriticalMessage() {
-		delete this->message;
+		if(message!=nullptr)
+		delete message;
 	}
 };
 
@@ -87,6 +88,12 @@ public:
 	Client(int id, std::pair<short, short> position){
 		this->id = id;
 		this->position = position;
+	}
+
+	void EmptyStepQueue() {
+		while (steps.size() > 0) {
+			steps.pop();
+		}
 	}
 
 };

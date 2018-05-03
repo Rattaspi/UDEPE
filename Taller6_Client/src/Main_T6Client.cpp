@@ -31,6 +31,15 @@ int main() {
 	int myId = 0;
 	std::vector<int>acks;
 	std::pair<short, short> myCoordenates{ 0,0 };
+	std::pair<short, short> originalCoordenates{ 0,0 };
+
+	int localScoreLeftNum = 0;
+	int localScoreRightNum = 0;
+	std::string localScoreLeft = std::to_string(localScoreLeftNum);
+	std::string localScoreRight = std::to_string(localScoreRightNum);
+	std::string serverMessage = "";
+	sf::Clock serverMessageClock;
+
 	std::pair<short, short> auxPosition{ 0,0 };
 	std::pair<short, short> currentDelta{ 0,0 };
 	std::pair<short, short>localBallCoords{ 500,300 };
@@ -91,6 +100,10 @@ int main() {
 			int anIndex=0;
 			switch (command) {
 			case PacketType::WELCOME:
+
+				serverMessageClock.restart();
+				serverMessage = "WELCOME";
+
 				imbs.Read(&myId,playerSizeBits);
 				imbs.Read(&playerSize, playerSizeBits);
 				playerSize++;
@@ -112,6 +125,7 @@ int main() {
 					else {
 						myCoordenates = aClient->position;
 						auxPosition = myCoordenates;
+						originalCoordenates = myCoordenates;
 						delete aClient;
 					}
 				}
@@ -186,6 +200,21 @@ int main() {
 
 
 				InterpolateBallMovement(&ballSteps, localBallCoords,someCoords);
+				break;
+			case PacketType::GAMESTART:
+
+				serverMessageClock.restart();
+				serverMessage = "THE GAME HAS STARTED!";
+
+				imbs.Read(&aCriticalId, criticalBits);
+				acks.push_back(aCriticalId);
+
+				std::cout << "GameStarted\n";
+				myCoordenates = originalCoordenates;
+				auxPosition = myCoordenates;
+				for (int i = 0; i < aClients.size(); i++) {
+					aClients[i]->EmptyStepQueue();
+				}
 				break;
 			case PacketType::ACKMOVE:
 
@@ -486,6 +515,40 @@ int main() {
 			ballRender.setFillColor(sf::Color::Yellow);
 			ballRender.setPosition(localBallCoords.first,localBallCoords.second);
 			window.draw(ballRender);
+
+
+			//Render puntuación
+			sf::Text scoreLeftRender;
+			scoreLeftRender.setString(localScoreLeft);
+			scoreLeftRender.setPosition((window.getSize().x / 4),(window.getSize().y/8));
+			scoreLeftRender.setScale(10, 10);
+			scoreLeftRender.setFillColor(sf::Color::White);
+			window.draw(scoreLeftRender);
+
+			sf::Text scoreRightRender;
+			scoreRightRender.setString(localScoreRight);
+			scoreRightRender.setPosition((window.getSize().x / 4) * 3, (window.getSize().y / 8));
+			scoreRightRender.setScale(10, 10);
+			scoreRightRender.setFillColor(sf::Color::White);
+			window.draw(scoreRightRender);
+
+			sf::Text serverTextRender;
+			serverTextRender.setString(serverMessage);
+			serverTextRender.setPosition(window.getSize().x / 2, window.getSize().y / 8);
+			serverTextRender.setScale(10, 10);
+			serverTextRender.setFillColor(sf::Color::White);
+			if (serverMessage.size() > 0) {
+				if (serverMessageClock.getElapsedTime().asSeconds() < 5) {
+					window.draw(serverTextRender);
+				}
+				else {
+					serverMessage = "";
+					serverMessageClock.restart();
+				}
+			}
+
+
+
 
 			window.display();
 

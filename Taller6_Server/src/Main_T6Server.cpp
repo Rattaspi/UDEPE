@@ -17,6 +17,8 @@ void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std
 
 void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta);
 
+int GetAvailableId(std::vector<ServerClient*>aClients,int num);
+
 int main() {
 	sf::Clock criticalClock;
 	srand(time(NULL));
@@ -27,6 +29,7 @@ int main() {
 	sf::UdpSocket* socket = new sf::UdpSocket();
 	status = socket->bind(50000);
 	bool end = false;
+	bool gameHadStarted=false;
 	std::queue<Event*> incomingInfo; //cola de paquetes entrantes
 	std::vector<std::vector<AccumMoveServer>> acumulatedMoves;
 	std::pair<short, short>initialPositions[4] = { { 200,200 },{ 200,400 },{ 800,200 },{ 800,400 } }; //formación inicial de los jugadores
@@ -35,6 +38,7 @@ int main() {
 	std::pair<float, float>* ballSpeed = new std::pair<float, float>(0, 0);
 	std::pair<float, float> auxBallSpeed{ 0,0 };
 	sf::Clock ballClock;
+	sf::Clock gameClock;
 
 	if (status != sf::Socket::Done) {
 		std::cout << "No se ha podido vincular al puerto" << std::endl;
@@ -49,6 +53,25 @@ int main() {
 	std::thread s(&PingThread, &end, &aClients, socket);
 	ballClock.restart();
 	while (!end) {
+		if (aClients.size() == numPlayers) {
+			if (gameClock.getElapsedTime().asSeconds() > 5) {
+				if (!gameHadStarted) {
+
+
+					for (int i = 0; i < aClients.size(); i++) {
+						OutputMemoryBitStream ombs;
+						ombs.Write(PacketType::GAMESTART, commandBits);
+						ombs.Write(aClients[i]->criticalId, criticalBits);
+						aClients[i]->AddCriticalMessage(new CriticalMessage(aClients[i]->criticalId, ombs.GetBufferPtr(), ombs.GetByteLength()));
+					}
+					gameHadStarted = true;
+				}
+			}
+		}
+		else if (!gameHadStarted){
+			gameClock.restart();
+		}
+
 
 		if (ballClock.getElapsedTime().asMilliseconds() > 100) {
 			UpdateBall(&ballCoords, ballSpeed, ballClock.getElapsedTime().asSeconds());
@@ -91,6 +114,7 @@ int main() {
 					ombs.Write(PacketType::WELCOME, commandBits);
 
 					if (!exists) {
+						clientID = GetAvailableId(aClients,numPlayers);
 						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, initialPositions[clientID]));
 						ombs.Write(clientID, playerSizeBits);
 						repeatingId = clientID;
@@ -495,6 +519,35 @@ void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, 
 
 	//std::cout << "New ball pos: " << coords->first <<", " << coords->second<<std::endl;
 }
+
+
+int GetAvailableId(std::vector<ServerClient*>aClients, int num) {
+	//Inicialización ids
+	std::map<int, bool> ids;
+	for (int i = 0; i < num; i++) {
+		ids[i] = false;
+	}
+
+	//Comprovación de tamaño
+	if (aClients.size() == num) {
+		return -1;
+	}
+	else { //Si el tamaño es menor a num, se busca el primer id disponible
+		for (int i = 0; i < aClients.size(); i++) {
+			ids[aClients[i]->GetID()] = true;
+		}
+
+		for (std::map<int, bool>::iterator it = ids.begin(); it != ids.end(); ++it){
+			if (!it->second) {
+				return it->first;
+			}
+		}
+	}
+
+	//Por si acaso
+	return -1;
+}
+
 
 
 /*				if (command == PacketType::HELLO) {

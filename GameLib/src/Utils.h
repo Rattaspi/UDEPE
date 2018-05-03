@@ -14,6 +14,7 @@ const int subdividedSteps = 9;
 const int playerRadius = 20;
 const int ballRadius = 13;
 const int shootStrength = 200;
+const int numPlayers = 4;
 
 void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 	int index = -1;

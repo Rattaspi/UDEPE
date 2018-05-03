@@ -50,13 +50,15 @@ int main() {
 	std::pair<short, short>localBallCoords{ windowWidth/2,windowHeight/2 };
 	std::vector<AccumMove> nonAckMoves;
 	int currentMoveId=0;
+	bool gameStart=false;
 	bool end = false; //finalizar programa
 	bool connected = false; //controla cuando se ha conectado con el servidor
+	bool gameOver = false;
+	bool winner = false;
 	std::queue<Event> incomingInfo; //cola de paquetes entrantes
 	std::vector<Client*> aClients;
 	sf::Clock clockForTheServer, clockForTheStep, clockForMyMovement;
 	int timeBetweenSteps = 2; //tiempo que tardan en actualizarse las posiciones interpoladas de los otros clientes.
-	bool canShoot = true;
 	int playerSpeed = 1;
 	bool down_key = false, up_key = false, right_key = false, left_key = false;
 	std::vector<sf::RectangleShape> mapLines; //guarda todas las lineas que forman el mapa.
@@ -99,6 +101,9 @@ int main() {
 			int playerSize = 0;
 			int aPlayerId = 0;
 			int aCriticalId = 0;
+			int aLeftScore = 0;
+			int aRightScore = 0;
+			bool aWinner = false;
 			std::pair<short, short>someCoords = { 0,0 };
 			OutputMemoryBitStream ombs;
 			//Client* aClient = nullptr;
@@ -202,21 +207,41 @@ int main() {
 				imbs.Read(&someCoords.second, coordsbits);
 				//localBallCoords = someCoords;
 				//ballSteps.push(someCoords);
-
+				gameStart = true;
 
 				InterpolateBallMovement(&ballSteps, localBallCoords,someCoords);
+				break;
+			case PacketType::GOAL:
+				imbs.Read(&aCriticalId, criticalBits);
+				acks.push_back(aCriticalId);
+
+				imbs.Read(&aRightScore, scoreBits);
+				imbs.Read(&aLeftScore, scoreBits);
+
+				localScoreRightNum = aRightScore;
+				localScoreLeftNum = aLeftScore;
+
+				std::cout << "SCORE " <<localScoreLeftNum <<" - "<<localScoreRightNum;
+				localScoreLeft = std::to_string(localScoreLeftNum);
+				localScoreRight = std::to_string(localScoreRightNum);
+				break;
+			case PacketType::GAMEOVER:
+				imbs.Read(&aCriticalId, criticalBits);
+				imbs.Read(&aWinner, boolBit);
+				winner = aWinner;
+				gameOver = true;
 				break;
 			case PacketType::GAMESTART:
 
 				serverMessageClock.restart();
 				serverMessage = "THE GAME HAS STARTED!";
-
+				gameStart = true;
 				imbs.Read(&aCriticalId, criticalBits);
 				acks.push_back(aCriticalId);
 
 				std::cout << "GameStarted\n";
-				myCoordenates = originalCoordenates;
-				auxPosition = myCoordenates;
+				//myCoordenates = originalCoordenates;
+				//auxPosition = myCoordenates;
 				for (int i = 0; i < aClients.size(); i++) {
 					aClients[i]->EmptyStepQueue();
 				}
@@ -323,7 +348,7 @@ int main() {
 					break;
 				case sf::Event::KeyPressed:
 					if (event.key.code == sf::Keyboard::Space) {
-						if (shootCounter.getElapsedTime().asMilliseconds()>1000) {
+						if (shootCounter.getElapsedTime().asMilliseconds()>shootCoolDown) {
 							shootCounter.restart();
 							std::cout << "SHOOT ENVIADO\n";
 							OutputMemoryBitStream ombs;
@@ -416,6 +441,12 @@ int main() {
 
 			//MOVIMIENTO DE LA PELOTA
 			if (clockForTheBallMovement.getElapsedTime().asMilliseconds() > timeBetweenSteps/2) {
+				if (ballSteps.size() > 100) {
+					for (int i = 0; i < 25; i++) {
+						ballSteps.pop();
+					}
+				}
+
 				if (ballSteps.size() != 0) {
 					localBallCoords = ballSteps.front();
 					ballSteps.pop();
@@ -451,6 +482,11 @@ int main() {
 
 					move.idMove = currentMoveId;
 					currentMoveId++;
+
+					if (currentMoveId >= 255) {
+						currentMoveId = 0;
+					}
+
 					nonAckMoves.push_back(move);
 					OutputMemoryBitStream ombs;
 					ombs.Write(PacketType::MOVE, commandBits);
@@ -518,13 +554,29 @@ int main() {
 
 
 			//Pelota
-			sf::CircleShape ballRender(ballRadius);
-			ballRender.setFillColor(sf::Color::Yellow);
-			ballRender.setPosition(localBallCoords.first,localBallCoords.second);
-			window.draw(ballRender);
+			if (gameStart&&!gameOver) {
+				sf::CircleShape ballRender(ballRadius);
+				ballRender.setFillColor(sf::Color::Yellow);
+				ballRender.setPosition(localBallCoords.first, localBallCoords.second);
+				window.draw(ballRender);
+			}
 
 			//Render puntuación
 			DrawScores(localScoreLeft, localScoreRight, &serverMessage, &window, &serverMessageClock);
+
+			if (gameOver) {
+				if ((myId ==0||myId==1)&&!winner) {
+					serverMessage = "YOU WIN!";
+				}
+				else if ((myId == 2 ||myId == 3)&& winner) {
+					serverMessage = "YOU WIN!";
+				}else{
+					serverMessage = "YOU LOSE!";
+				}
+			}
+			else {
+
+			}
 
 			window.display();
 

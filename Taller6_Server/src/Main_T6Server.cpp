@@ -15,9 +15,11 @@ void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClien
 
 void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std::pair<short, short> ballPos);
 
-void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta);
+void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta,int*,int*,std::vector<ServerClient*>*,sf::UdpSocket*);
 
 int GetAvailableId(std::vector<ServerClient*>aClients,int num);
+
+void CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket);
 
 int main() {
 	sf::Clock criticalClock;
@@ -29,16 +31,20 @@ int main() {
 	sf::UdpSocket* socket = new sf::UdpSocket();
 	status = socket->bind(50000);
 	bool end = false;
+	bool sentEnd = false;
 	bool gameHadStarted=false;
 	std::queue<Event*> incomingInfo; //cola de paquetes entrantes
 	std::vector<std::vector<AccumMoveServer>> acumulatedMoves;
 	std::pair<short, short>initialPositions[4] = { { 200,200 },{ 200,400 },{ 800,200 },{ 800,400 } }; //formación inicial de los jugadores
 
-	std::pair<float, float> ballCoords{ windowWidth/2,windowHeight/2};
+	std::pair<float, float> ballCoords = ballStartPos;
 	std::pair<float, float>* ballSpeed = new std::pair<float, float>(0, 0);
 	std::pair<float, float> auxBallSpeed{ 0,0 };
 	sf::Clock ballClock;
 	sf::Clock gameClock;
+
+	int leftScore = 0;
+	int rightScore = 0;
 
 	if (status != sf::Socket::Done) {
 		std::cout << "No se ha podido vincular al puerto" << std::endl;
@@ -72,11 +78,12 @@ int main() {
 			gameClock.restart();
 		}
 
-
-		if (ballClock.getElapsedTime().asMilliseconds() > 100) {
-			UpdateBall(&ballCoords, ballSpeed, ballClock.getElapsedTime().asSeconds());
-			SendBallPos(&aClients, socket, ballCoords);
-			ballClock.restart();
+		if (gameHadStarted) {
+			if (ballClock.getElapsedTime().asMilliseconds() > 100) {
+				UpdateBall(&ballCoords, ballSpeed, ballClock.getElapsedTime().asSeconds(), &leftScore, &rightScore, &aClients, socket);
+				SendBallPos(&aClients, socket, ballCoords);
+				ballClock.restart();
+			}
 		}
 
 		if (!incomingInfo.empty()) {
@@ -119,7 +126,6 @@ int main() {
 						clientID = GetAvailableId(aClients,numPlayers);
 						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, initialPositions[clientID]));
 						coords = initialPositions[clientID];
-
 						ombs.Write(clientID, playerSizeBits);
 						repeatingId = clientID;
 						clientID++;
@@ -217,72 +223,74 @@ int main() {
 				}
 				break;
 			case SHOOT:
-				std::cout << "SHOOT RECIBIDO\n";
-				aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &aClients);
+				if (gameHadStarted) {
+					std::cout << "SHOOT RECIBIDO\n";
+					aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &aClients);
 
-				if (aClient != nullptr) {
-					coords.first = 0;
-					coords.second = 0;
-					auxCoords.first = 0;
-					auxCoords.second = 0;
+					if (aClient != nullptr) {
+						coords.first = 0;
+						coords.second = 0;
+						auxCoords.first = 0;
+						auxCoords.second = 0;
 
-					//coords ->Jugador
-					imbs.Read(&coords.first, coordsbits);
-					imbs.Read(&coords.second, coordsbits);
-					coords.first += playerRadius;
-					coords.second += playerRadius;
+						//coords ->Jugador
+						imbs.Read(&coords.first, coordsbits);
+						imbs.Read(&coords.second, coordsbits);
+						coords.first += playerRadius;
+						coords.second += playerRadius;
 
-					//auxCoords ->Pelota en su simulacion
-					imbs.Read(&auxCoords.first, coordsbits);
-					imbs.Read(&auxCoords.second, coordsbits);
+						//auxCoords ->Pelota en su simulacion
+						imbs.Read(&auxCoords.first, coordsbits);
+						imbs.Read(&auxCoords.second, coordsbits);
 
-					auxCoords.first += ballRadius;
-					auxCoords.second += ballRadius;
+						auxCoords.first += ballRadius;
+						auxCoords.second += ballRadius;
 
-					//if (std::sqrt(std::pow(coords.first - auxCoords.first, 2) + (std::pow(coords.second - auxCoords.second, 2))) < 15) {
-					//ballSpeed->first = auxCoords.first - coords.first;
-					//ballSpeed->second = auxCoords.second - coords.second;
+						//if (std::sqrt(std::pow(coords.first - auxCoords.first, 2) + (std::pow(coords.second - auxCoords.second, 2))) < 15) {
+						//ballSpeed->first = auxCoords.first - coords.first;
+						//ballSpeed->second = auxCoords.second - coords.second;
 
-					auxBallSpeed.first = auxCoords.first - coords.first;
-					auxBallSpeed.second = auxCoords.second - coords.second;
-
-
-					if (aClient->shootClock.getElapsedTime().asMilliseconds() > 1000) {
-						float magnitude = auxBallSpeed.first * auxBallSpeed.first + auxBallSpeed.second * auxBallSpeed.second;
-
-						//std::cout << "Magnitude = " << magnitude << std::endl;
-						std::cout << "resta = " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
-
-						magnitude = std::sqrt(magnitude);
-						std::cout << "Magnitude = " << magnitude << std::endl;
-
-						if (magnitude < ballRadius + playerRadius + 5) {
-
-							aClient->shootClock.restart();
-
-							std::cout << "Raiz Magnitude = " << magnitude << std::endl;
-							*ballSpeed = auxBallSpeed;
-
-							ballSpeed->first /= magnitude;
-							ballSpeed->second /= magnitude;
-
-							std::cout << "BallSpeed dividida magnitude " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
-
-							ballSpeed->first *= shootStrength;
-							ballSpeed->second *= shootStrength;
-
-							std::cout << "BallSpeed dividida magnitude por 10 " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+						auxBallSpeed.first = auxCoords.first - coords.first;
+						auxBallSpeed.second = auxCoords.second - coords.second;
 
 
-							//ballSpeed.first = std::floor(ballSpeed.first);
-							//ballSpeed.second = std::floor(ballSpeed.second);
+						if (aClient->shootClock.getElapsedTime().asMilliseconds() > shootCoolDown) {
+							float magnitude = auxBallSpeed.first * auxBallSpeed.first + auxBallSpeed.second * auxBallSpeed.second;
 
-							//std::cout << "Recibido Shoot, new BallSpeed = " << ballSpeed.first << ", " << ballSpeed.second << std::endl;
+							//std::cout << "Magnitude = " << magnitude << std::endl;
+							std::cout << "resta = " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+
+							magnitude = std::sqrt(magnitude);
+							std::cout << "Magnitude = " << magnitude << std::endl;
+
+							if (magnitude < ballRadius + playerRadius + 5) {
+
+								aClient->shootClock.restart();
+
+								std::cout << "Raiz Magnitude = " << magnitude << std::endl;
+								*ballSpeed = auxBallSpeed;
+
+								ballSpeed->first /= magnitude;
+								ballSpeed->second /= magnitude;
+
+								std::cout << "BallSpeed dividida magnitude " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+
+								ballSpeed->first *= shootStrength;
+								ballSpeed->second *= shootStrength;
+
+								std::cout << "BallSpeed dividida magnitude por 10 " << ballSpeed->first << ", " << ballSpeed->second << std::endl;
+
+
+								//ballSpeed.first = std::floor(ballSpeed.first);
+								//ballSpeed.second = std::floor(ballSpeed.second);
+
+								//std::cout << "Recibido Shoot, new BallSpeed = " << ballSpeed.first << ", " << ballSpeed.second << std::endl;
+							}
 						}
+
+						//}
+
 					}
-
-					//}
-
 				}
 
 				break;
@@ -501,7 +509,7 @@ void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std
 	}
 }
 
-void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta) {
+void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta, int*leftScore, int*rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket) {
 	coords->first += speed->first*delta;
 	coords->second += speed->second*delta;
 
@@ -521,9 +529,69 @@ void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, 
 		speed->second *= -1;
 	}
 
+	if (coords->second > 200 - ballRadius && coords->second < 400 + ballRadius) {
+		std::cout << "Score: " << *leftScore << " - " << *rightScore << std::endl;
+		if (coords->first <= 0+ballRadius) {
+			std::cout << "GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOAL\n";
+			*leftScore+=1;
+			CheckGameOver(*leftScore, *rightScore, aClients, socket);
+			for (int i = 0; i < aClients->size(); i++) {
+				OutputMemoryBitStream ombs;
+				ombs.Write(PacketType::GOAL,commandBits);
+				ombs.Write(aClients->at(i)->criticalId, criticalBits);
+				ombs.Write(*rightScore, scoreBits);
+				ombs.Write(*leftScore, scoreBits);
+				aClients->at(i)->AddCriticalMessage(new CriticalMessage(aClients->at(i)->criticalId,ombs.GetBufferPtr(),ombs.GetByteLength()));
+				coords->first = (float)ballStartPos.first;
+				coords->second = (float)ballStartPos.second;
+				speed->first = 0;
+				speed->second = 0;
+			}
+		}
+		else if (coords->first >= windowWidth-ballRadius*2) {
+			std::cout << "GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOAL\n";
+			*rightScore+=1;
+			CheckGameOver(*leftScore, *rightScore, aClients, socket);
+
+			for (int i = 0; i < aClients->size(); i++) {
+				OutputMemoryBitStream ombs;
+				ombs.Write(PacketType::GOAL, commandBits);
+				ombs.Write(aClients->at(i)->criticalId, criticalBits);
+				ombs.Write(*rightScore, scoreBits);
+				ombs.Write(*leftScore, scoreBits);
+				aClients->at(i)->AddCriticalMessage(new CriticalMessage(aClients->at(i)->criticalId, ombs.GetBufferPtr(), ombs.GetByteLength()));
+				coords->first = (float)ballStartPos.first;
+				coords->second = (float)ballStartPos.second;
+				speed->first = 0;
+				speed->second = 0;
+			}
+		}
+	}
+
 	//std::cout << "New ball pos: " << coords->first <<", " << coords->second<<std::endl;
 }
 
+void CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients,sf::UdpSocket* socket) {
+	//Si gana left se pasa un 0, si gana right se pasa un 1
+	if (leftScore == victoryScore) {
+		for (int i = 0; i < aClients->size(); i++) {
+			OutputMemoryBitStream ombs;
+			ombs.Write(PacketType::GAMEOVER, commandBits);
+			ombs.Write(aClients->at(i)->criticalId,criticalBits);
+			ombs.Write(0, boolBit);
+			aClients->at(i)->AddCriticalMessage(new CriticalMessage(aClients->at(i)->criticalId, ombs.GetBufferPtr(), ombs.GetByteLength()));
+		}
+	}
+	else if (rightScore == victoryScore) {
+		for (int i = 0; i < aClients->size(); i++) {
+			OutputMemoryBitStream ombs;
+			ombs.Write(PacketType::GAMEOVER, commandBits);
+			ombs.Write(aClients->at(i)->criticalId, criticalBits);
+			ombs.Write(1, boolBit);
+			aClients->at(i)->AddCriticalMessage(new CriticalMessage(aClients->at(i)->criticalId, ombs.GetBufferPtr(), ombs.GetByteLength()));
+		}
+	}
+}
 
 int GetAvailableId(std::vector<ServerClient*>aClients, int num) {
 	//Inicialización ids

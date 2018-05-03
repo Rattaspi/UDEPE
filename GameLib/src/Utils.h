@@ -10,6 +10,8 @@ const int playerSizeBits = 3;
 const int coordsbits = 10;
 const int criticalBits=8;
 const int deltaMoveBits = 8;
+const int scoreBits = 4;
+const int boolBit = 1;
 const int subdividedSteps = 9;
 const int playerRadius = 20;
 const int ballRadius = 13;
@@ -21,6 +23,9 @@ const std::pair<short, short> rightGoalTop;
 const std::pair<short, short> rightGoalBot;
 const int windowWidth = 1000;
 const int windowHeight = 800;
+const int shootCoolDown = 500;
+const int victoryScore = 1;
+const std::pair<short, short> ballStartPos{windowWidth/2,300};
 
 void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 	int index = -1;

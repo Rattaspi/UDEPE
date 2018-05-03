@@ -21,6 +21,8 @@ void DrawMap(std::vector<sf::RectangleShape>*, sf::RenderWindow*);
 
 void InterpolateBallMovement(std::queue<std::pair<short, short>>*, std::pair<short, short>,std::pair<short,short>);
 
+void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::string serverMessage, sf::RenderWindow* window, sf::Clock*serverMessageClock);
+
 int main() {
 	std::cout << "CLIENTE INICIADO" << std::endl;
 	std::string serverIp = "localhost";
@@ -42,7 +44,7 @@ int main() {
 
 	std::pair<short, short> auxPosition{ 0,0 };
 	std::pair<short, short> currentDelta{ 0,0 };
-	std::pair<short, short>localBallCoords{ 500,300 };
+	std::pair<short, short>localBallCoords{ windowWidth/2,windowHeight/2 };
 	std::vector<AccumMove> nonAckMoves;
 	int currentMoveId=0;
 	bool end = false; //finalizar programa
@@ -64,7 +66,7 @@ int main() {
 	sf::Clock shootCounter;
 	sf::Clock clock, clockForTheBallMovement;
 
-	sf::RenderWindow window(sf::VideoMode(1000, 600), "Cliente con ID "+myId);
+	sf::RenderWindow window(sf::VideoMode(windowWidth, windowHeight), "Cliente con ID "+myId);
 	std::vector<sf::CircleShape> playerRenders;
 
 	while (!end) {
@@ -518,34 +520,7 @@ int main() {
 
 
 			//Render puntuación
-			sf::Text scoreLeftRender;
-			scoreLeftRender.setString(localScoreLeft);
-			scoreLeftRender.setPosition((window.getSize().x / 4),(window.getSize().y/8));
-			scoreLeftRender.setScale(10, 10);
-			scoreLeftRender.setFillColor(sf::Color::White);
-			window.draw(scoreLeftRender);
-
-			sf::Text scoreRightRender;
-			scoreRightRender.setString(localScoreRight);
-			scoreRightRender.setPosition((window.getSize().x / 4) * 3, (window.getSize().y / 8));
-			scoreRightRender.setScale(10, 10);
-			scoreRightRender.setFillColor(sf::Color::White);
-			window.draw(scoreRightRender);
-
-			sf::Text serverTextRender;
-			serverTextRender.setString(serverMessage);
-			serverTextRender.setPosition(window.getSize().x / 2, window.getSize().y / 8);
-			serverTextRender.setScale(10, 10);
-			serverTextRender.setFillColor(sf::Color::White);
-			if (serverMessage.size() > 0) {
-				if (serverMessageClock.getElapsedTime().asSeconds() < 5) {
-					window.draw(serverTextRender);
-				}
-				else {
-					serverMessage = "";
-					serverMessageClock.restart();
-				}
-			}
+			DrawScores(localScoreLeft, localScoreRight,  serverMessage,  &window, &serverMessageClock);
 
 
 
@@ -649,6 +624,37 @@ void SetUpMapLines(std::vector<sf::RectangleShape>* mapLines) {
 void DrawMap(std::vector<sf::RectangleShape>* mapLines, sf::RenderWindow* window) {
 	for (int i = 0; i < mapLines->size(); i++) {
 		window->draw(mapLines->at(i));
+	}
+}
+
+void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::string serverMessage, sf::RenderWindow* window, sf::Clock*serverMessageClock) {
+	sf::Text scoreLeftRender;
+	scoreLeftRender.setString(localScoreLeft);
+	scoreLeftRender.setPosition((window->getSize().x / 4), (window->getSize().y / 8));
+	scoreLeftRender.setScale(10, 10);
+	scoreLeftRender.setFillColor(sf::Color::White);
+	window->draw(scoreLeftRender);
+
+	sf::Text scoreRightRender;
+	scoreRightRender.setString(localScoreRight);
+	scoreRightRender.setPosition((window->getSize().x / 4) * 3, (window->getSize().y / 8));
+	scoreRightRender.setScale(10, 10);
+	scoreRightRender.setFillColor(sf::Color::White);
+	window->draw(scoreRightRender);
+
+	sf::Text serverTextRender;
+	serverTextRender.setString(serverMessage);
+	serverTextRender.setPosition(window->getSize().x / 2, window->getSize().y / 8);
+	serverTextRender.setScale(10, 10);
+	serverTextRender.setFillColor(sf::Color::White);
+	if (serverMessage.size() > 0) {
+		if (serverMessageClock->getElapsedTime().asSeconds() < 5) {
+			window->draw(serverTextRender);
+		}
+		else {
+			serverMessage = "";
+			serverMessageClock->restart();
+		}
 	}
 }
 

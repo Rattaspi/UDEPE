@@ -15,6 +15,12 @@ const int playerRadius = 20;
 const int ballRadius = 13;
 const int shootStrength = 200;
 const int numPlayers = 4;
+const std::pair<short, short> leftGoalTop;
+const std::pair<short, short> leftGoalBot;
+const std::pair<short, short> rightGoalTop;
+const std::pair<short, short> rightGoalBot;
+const int windowWidth = 1000;
+const int windowHeight = 600;
 
 void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 	int index = -1;

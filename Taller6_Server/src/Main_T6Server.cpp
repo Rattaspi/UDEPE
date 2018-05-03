@@ -34,7 +34,7 @@ int main() {
 	std::vector<std::vector<AccumMoveServer>> acumulatedMoves;
 	std::pair<short, short>initialPositions[4] = { { 200,200 },{ 200,400 },{ 800,200 },{ 800,400 } }; //formación inicial de los jugadores
 
-	std::pair<float, float> ballCoords{ 400,300 };
+	std::pair<float, float> ballCoords{ windowWidth/2,windowHeight/2};
 	std::pair<float, float>* ballSpeed = new std::pair<float, float>(0, 0);
 	std::pair<float, float> auxBallSpeed{ 0,0 };
 	sf::Clock ballClock;
@@ -100,13 +100,15 @@ int main() {
 			std::pair<short, short> auxCoords{ 0,0 };
 			switch (command) {
 			case HELLO:
-				coords.first = rand() % 740;
-				coords.second = rand() % 540;
+				//coords.first = rand() % 740;
+				//coords.second = rand() % 540;
 
 				for (int i = 0; i < aClients.size(); i++) {
 					if (aClients[i]->GetIP() == remoteIP&&aClients[i]->GetPort() == remotePort) {
 						exists = true;
 						repeatingId = aClients[i]->GetID();
+						coords = initialPositions[aClients[i]->GetID()];
+
 					}
 				}
 
@@ -116,6 +118,8 @@ int main() {
 					if (!exists) {
 						clientID = GetAvailableId(aClients,numPlayers);
 						aClients.push_back(new ServerClient(remoteIP.toString(), remotePort, clientID, initialPositions[clientID]));
+						coords = initialPositions[clientID];
+
 						ombs.Write(clientID, playerSizeBits);
 						repeatingId = clientID;
 						clientID++;

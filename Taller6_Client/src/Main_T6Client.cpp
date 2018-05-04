@@ -24,8 +24,12 @@ void InterpolateBallMovement(std::queue<std::pair<short, short>>*, std::pair<sho
 void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::string* serverMessage, sf::RenderWindow* window, sf::Clock*serverMessageClock);
 
 sf::Font font;
+sf::Texture bgTex;
+sf::Sprite bgSprite;
 
 int main() {
+	bgTex.loadFromFile("bg.jpg");
+	bgSprite.setTexture(bgTex);
 	font.loadFromFile("arial_narrow_7.ttf");
 	std::cout << "CLIENTE INICIADO" << std::endl;
 	std::string serverIp = "localhost";
@@ -652,30 +656,34 @@ void ReceptionThread(bool* end, std::queue<Event>* incomingInfo, sf::UdpSocket* 
 }
 
 void SetUpMapLines(std::vector<sf::RectangleShape>* mapLines) {
-	sf::RectangleShape rectangle(sf::Vector2f(1000, 7));
-	rectangle.setFillColor(sf::Color(100, 100, 100, 255));
-	mapLines->push_back(rectangle);//superior
+	//sf::RectangleShape rectangle(sf::Vector2f(1000, 7));
+	//rectangle.setFillColor(sf::Color(100, 100, 100, 255));
+	//mapLines->push_back(rectangle);//superior
 	
+
+	sf::RectangleShape rectangle(sf::Vector2f(1000,205));
 	rectangle.setPosition(sf::Vector2f(0, 593));
-	rectangle.setSize(sf::Vector2f(1000, 205));
+	rectangle.setFillColor(sf::Color(100, 100, 100, 255));
+	//rectangle.setSize(sf::Vector2f(1000, 205));
 	mapLines->push_back(rectangle);//inferior
 	
-	rectangle.setSize(sf::Vector2f(200, 7));
-	rectangle.setPosition(sf::Vector2f(7, 0));
-	rectangle.setRotation(90.0f);
-	mapLines->push_back(rectangle); //derecha superior
-	
-	rectangle.setPosition(sf::Vector2f(7, 400));
-	mapLines->push_back(rectangle); //derecha inferior
-	
-	rectangle.setPosition(sf::Vector2f(1000, 0));
-	mapLines->push_back(rectangle); //izquierda superior
-	
-	rectangle.setPosition(sf::Vector2f(1000, 400));
-	mapLines->push_back(rectangle); //izquierda inferior
+	//rectangle.setSize(sf::Vector2f(200, 7));
+	//rectangle.setPosition(sf::Vector2f(7, 0));
+	//rectangle.setRotation(90.0f);
+	//mapLines->push_back(rectangle); //derecha superior
+	//
+	//rectangle.setPosition(sf::Vector2f(7, 400));
+	//mapLines->push_back(rectangle); //derecha inferior
+	//
+	//rectangle.setPosition(sf::Vector2f(1000, 0));
+	//mapLines->push_back(rectangle); //izquierda superior
+	//
+	//rectangle.setPosition(sf::Vector2f(1000, 400));
+	//mapLines->push_back(rectangle); //izquierda inferior
 }
 
 void DrawMap(std::vector<sf::RectangleShape>* mapLines, sf::RenderWindow* window) {
+	window->draw(bgSprite);
 	for (int i = 0; i < mapLines->size(); i++) {
 		window->draw(mapLines->at(i));
 	}

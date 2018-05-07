@@ -15,13 +15,11 @@ public:
 	std::pair<short, short> absolute;
 	AccumMove() {
 		idMove = 0;
-		delta = { 0,0 };
 		absolute = { 0,0 };
 	}
 
-	AccumMove(int idMove, std::pair<short, short> delta, std::pair<short, short> absolute) {
+	AccumMove(int idMove, std::pair<short, short> absolute) {
 		this->idMove = idMove;
-		this->delta = delta;
 		this->absolute = absolute;
 	}
 
@@ -30,7 +28,7 @@ public:
 class AccumMoveServer : public AccumMove {
 public:
 	int playerID;
-	AccumMoveServer(int idMove, std::pair<short, short> delta, std::pair<short, short> absolute, int playerID) {
+	AccumMoveServer(int idMove, std::pair<short, short> absolute, int playerID) {
 		this->idMove = idMove;
 		this->delta = delta;
 		this->absolute = absolute;
@@ -50,6 +48,7 @@ class CriticalMessage {
 public:
 	int criticalId;
 	uint32_t messageSize;
+	//	char* message = new char();
 	char* message;
 	CriticalMessage(int criticalId, char* message, uint32_t messageSize) {
 		this->message = new char[messageSize];
@@ -58,10 +57,10 @@ public:
 		strcpy(this->message, message);
 		this->messageSize = messageSize;
 	}
-	~CriticalMessage() {
-		if(message!=nullptr)
-		delete message;
-	}
+	//~CriticalMessage() {
+	//	if(message!=nullptr)
+	//	delete message;
+	//}
 };
 
 class Client {

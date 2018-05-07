@@ -24,7 +24,7 @@ const std::pair<short, short> rightGoalBot;
 const int windowWidth = 1000;
 const int windowHeight = 800;
 const int shootCoolDown = 500;
-const int victoryScore = 1;
+const int victoryScore = 10;
 const std::pair<short, short> ballStartPos{windowWidth/2,300};
 
 void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {

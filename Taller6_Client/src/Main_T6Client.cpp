@@ -61,7 +61,7 @@ int main() {
 	bool winner = false;
 	std::queue<Event> incomingInfo; //cola de paquetes entrantes
 	std::vector<Client*> aClients;
-	sf::Clock clockForTheServer, clockForTheStep, clockForMyMovement;
+	sf::Clock clockForTheServer, clockForTheStep, clockForMyMovement, clockGameOver;
 	int timeBetweenSteps = 2; //tiempo que tardan en actualizarse las posiciones interpoladas de los otros clientes.
 	int playerSpeed = 1;
 	bool down_key = false, up_key = false, right_key = false, left_key = false;
@@ -116,7 +116,7 @@ int main() {
 			case PacketType::WELCOME:
 
 				serverMessageClock.restart();
-				serverMessage = "WELCOME";
+				serverMessage = "WELCOME! \nSCORE " + std::to_string(victoryScore) + " GOALS TO WIN";
 
 				imbs.Read(&myId,playerSizeBits);
 				imbs.Read(&playerSize, playerSizeBits);
@@ -222,8 +222,8 @@ int main() {
 				imbs.Read(&aRightScore, scoreBits);
 				imbs.Read(&aLeftScore, scoreBits);
 
-				localScoreRightNum = aRightScore;
-				localScoreLeftNum = aLeftScore;
+				localScoreRightNum = aRightScore-1;
+				localScoreLeftNum = aLeftScore-1;
 
 				std::cout << "SCORE " <<localScoreLeftNum <<" - "<<localScoreRightNum;
 				localScoreLeft = std::to_string(localScoreLeftNum);
@@ -259,7 +259,7 @@ int main() {
 				AccumMove accumMove;
 				Client* aClient = GetClientWithId(aPlayerId,aClients);
 
-				if (aClient != nullptr) { //Si no es nullptr no eres tu mismo.
+				if (aClient != nullptr&&aPlayerId!=myId) { //Si no es nullptr no eres tu mismo.
 					//aClient->position = someCoords;
 
 					//std::cout << "Recibido ACKMOVE de jugador con ID " << aPlayerId << "Sus coordenadas son " << someCoords.first <<", "<<someCoords.second<< std::endl;
@@ -411,29 +411,32 @@ int main() {
 			}
 
 			//He sacado el control de movimiento fuera del switch de los eventos para poder realizar movimiento lateral.
+
+
+
 			if (clockForMyMovement.getElapsedTime().asMilliseconds() > timeBetweenSteps) {
-				if (up_key) {
+				if (up_key&&myCoordenates.second>1) {
 					int deltaX = 0;
 					int deltaY = -playerSpeed;
 					auxPosition.second += deltaY;
 					currentDelta.second += deltaY;
 					myCoordenates = auxPosition;
 				}
-				else if (down_key) {
+				else if (down_key&&myCoordenates.second + playerRadius * 2<599) {
 					int deltaX = 0;
 					int deltaY = playerSpeed;
 					auxPosition.second += deltaY;
 					currentDelta.second += deltaY;
 					myCoordenates = auxPosition;
 				}
-				if (right_key) {
+				if (right_key&&myCoordenates.first+playerRadius*2<999) {
 					int deltaX = playerSpeed;
 					int deltaY = 0;
 					auxPosition.first += deltaX;
 					currentDelta.first += deltaX;
 					myCoordenates = auxPosition;
 				}
-				else if (left_key) {
+				else if (left_key&&myCoordenates.first>1) {
 					int deltaX = -playerSpeed;
 					int deltaY = 0;
 					auxPosition.first += deltaX;
@@ -495,8 +498,6 @@ int main() {
 					OutputMemoryBitStream ombs;
 					ombs.Write(PacketType::MOVE, commandBits);
 					ombs.Write(move.idMove, criticalBits);
-					ombs.Write(currentDelta.first, deltaMoveBits);
-					ombs.Write(currentDelta.second, deltaMoveBits);
 					ombs.Write(auxPosition.first, coordsbits);
 					ombs.Write(auxPosition.second, coordsbits);
 
@@ -569,6 +570,9 @@ int main() {
 			DrawScores(localScoreLeft, localScoreRight, &serverMessage, &window, &serverMessageClock);
 
 			if (gameOver) {
+				if (clockGameOver.getElapsedTime().asSeconds() > 5) {
+					end = true;
+				}
 				if ((myId ==0||myId==1)&&!winner) {
 					serverMessage = "YOU WIN!";
 				}
@@ -579,7 +583,7 @@ int main() {
 				}
 			}
 			else {
-
+				clockGameOver.restart();
 			}
 
 			window.display();
@@ -606,7 +610,9 @@ int main() {
 }
 
 void EraseAccums(std::vector<AccumMove>*nonAckMoves, int until) {
-	nonAckMoves->erase(nonAckMoves->begin(), nonAckMoves->begin() + until);
+	if (nonAckMoves->size() > until) {
+		nonAckMoves->erase(nonAckMoves->begin(), nonAckMoves->begin() + until);
+	}
 }
 
 bool CheckValidMoveId(std::vector<AccumMove>*nonAckMoves, int aCriticalId, std::pair<short, short>someCoords, int* index) {
@@ -707,13 +713,15 @@ void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::st
 	window->draw(scoreRightRender);
 
 
-	sf::Text serverTextRender;
-	serverTextRender.setFont(font);
-	serverTextRender.setCharacterSize(50);
-	serverTextRender.setString(*serverMessage);
-	serverTextRender.setPosition(window->getSize().x / 4, window->getSize().y / 8);
-	serverTextRender.setFillColor(sf::Color::White);
+
 	if (serverMessage->size() > 0) {
+		sf::Text serverTextRender;
+		serverTextRender.setFont(font);
+		serverTextRender.setCharacterSize(50);
+		serverTextRender.setString(*serverMessage);
+		serverTextRender.setPosition(window->getSize().x / 4, window->getSize().y / 8);
+		serverTextRender.setFillColor(sf::Color::Black);
+
 		if (serverMessageClock->getElapsedTime().asMilliseconds() < 5000) {
 			window->draw(serverTextRender);
 		}

@@ -15,11 +15,11 @@ void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClien
 
 void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std::pair<short, short> ballPos);
 
-void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta,int*,int*,std::vector<ServerClient*>*,sf::UdpSocket*);
+void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta,int*,int*,std::vector<ServerClient*>*,sf::UdpSocket*,bool*);
 
 int GetAvailableId(std::vector<ServerClient*>aClients,int num);
 
-void CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket);
+bool CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket);
 
 int main() {
 	sf::Clock criticalClock;
@@ -42,7 +42,8 @@ int main() {
 	std::pair<float, float> auxBallSpeed{ 0,0 };
 	sf::Clock ballClock;
 	sf::Clock gameClock;
-
+	sf::Clock gameOverClock;
+	bool gameOver = false;
 	int leftScore = 0;
 	int rightScore = 0;
 
@@ -80,10 +81,19 @@ int main() {
 
 		if (gameHadStarted) {
 			if (ballClock.getElapsedTime().asMilliseconds() > 100) {
-				UpdateBall(&ballCoords, ballSpeed, ballClock.getElapsedTime().asSeconds(), &leftScore, &rightScore, &aClients, socket);
+				UpdateBall(&ballCoords, ballSpeed, ballClock.getElapsedTime().asSeconds(), &leftScore, &rightScore, &aClients, socket,&gameOver);
 				SendBallPos(&aClients, socket, ballCoords);
 				ballClock.restart();
 			}
+		}
+
+		if (gameOver) {
+			if (gameOverClock.getElapsedTime().asSeconds() > 5) {
+				end = true;
+			}
+		}
+		else {
+			gameOverClock.restart();
 		}
 
 		if (!incomingInfo.empty()) {
@@ -301,8 +311,6 @@ int main() {
 						AccumMoveServer accumMove;
 						accumMove.playerID = aClient->id;
 						imbs.Read(&accumMove.idMove, criticalBits);
-						imbs.Read(&accumMove.delta.first, deltaMoveBits);
-						imbs.Read(&accumMove.delta.second, deltaMoveBits);
 						imbs.Read(&accumMove.absolute.first, coordsbits);
 						imbs.Read(&accumMove.absolute.second, coordsbits);
 						//std::cout << "Recibido accumMove de jugador ID " << aClient->id << " que tiene delta = " << accumMove.delta.first << ", " << accumMove.delta.second << " y absolute = " << accumMove.absolute.first << ", " <<  accumMove.absolute.second << std::endl;;
@@ -509,7 +517,7 @@ void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std
 	}
 }
 
-void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta, int*leftScore, int*rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket) {
+void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta, int*leftScore, int*rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, bool* gameOver) {
 	coords->first += speed->first*delta;
 	coords->second += speed->second*delta;
 
@@ -533,14 +541,14 @@ void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, 
 		std::cout << "Score: " << *leftScore << " - " << *rightScore << std::endl;
 		if (coords->first <= 0+ballRadius) {
 			std::cout << "GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOAL\n";
-			*leftScore+=1;
-			CheckGameOver(*leftScore, *rightScore, aClients, socket);
+			*rightScore+=1;
+			*gameOver = CheckGameOver(*leftScore, *rightScore, aClients, socket);
 			for (int i = 0; i < aClients->size(); i++) {
 				OutputMemoryBitStream ombs;
 				ombs.Write(PacketType::GOAL,commandBits);
 				ombs.Write(aClients->at(i)->criticalId, criticalBits);
-				ombs.Write(*rightScore, scoreBits);
-				ombs.Write(*leftScore, scoreBits);
+				ombs.Write(*rightScore+1, scoreBits);
+				ombs.Write(*leftScore+1, scoreBits);
 				aClients->at(i)->AddCriticalMessage(new CriticalMessage(aClients->at(i)->criticalId,ombs.GetBufferPtr(),ombs.GetByteLength()));
 				coords->first = (float)ballStartPos.first;
 				coords->second = (float)ballStartPos.second;
@@ -550,15 +558,15 @@ void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, 
 		}
 		else if (coords->first >= windowWidth-ballRadius*2) {
 			std::cout << "GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOAL\n";
-			*rightScore+=1;
-			CheckGameOver(*leftScore, *rightScore, aClients, socket);
+			*leftScore+=1;
+			*gameOver = CheckGameOver(*leftScore, *rightScore, aClients, socket);
 
 			for (int i = 0; i < aClients->size(); i++) {
 				OutputMemoryBitStream ombs;
 				ombs.Write(PacketType::GOAL, commandBits);
 				ombs.Write(aClients->at(i)->criticalId, criticalBits);
-				ombs.Write(*rightScore, scoreBits);
-				ombs.Write(*leftScore, scoreBits);
+				ombs.Write(*rightScore+1, scoreBits);
+				ombs.Write(*leftScore+1, scoreBits);
 				aClients->at(i)->AddCriticalMessage(new CriticalMessage(aClients->at(i)->criticalId, ombs.GetBufferPtr(), ombs.GetByteLength()));
 				coords->first = (float)ballStartPos.first;
 				coords->second = (float)ballStartPos.second;
@@ -571,7 +579,7 @@ void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, 
 	//std::cout << "New ball pos: " << coords->first <<", " << coords->second<<std::endl;
 }
 
-void CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients,sf::UdpSocket* socket) {
+bool CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients,sf::UdpSocket* socket) {
 	//Si gana left se pasa un 0, si gana right se pasa un 1
 	if (leftScore == victoryScore) {
 		for (int i = 0; i < aClients->size(); i++) {
@@ -581,6 +589,7 @@ void CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aCl
 			ombs.Write(0, boolBit);
 			aClients->at(i)->AddCriticalMessage(new CriticalMessage(aClients->at(i)->criticalId, ombs.GetBufferPtr(), ombs.GetByteLength()));
 		}
+		return true;
 	}
 	else if (rightScore == victoryScore) {
 		for (int i = 0; i < aClients->size(); i++) {
@@ -590,7 +599,9 @@ void CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aCl
 			ombs.Write(1, boolBit);
 			aClients->at(i)->AddCriticalMessage(new CriticalMessage(aClients->at(i)->criticalId, ombs.GetBufferPtr(), ombs.GetByteLength()));
 		}
+		return true;
 	}
+	return false;
 }
 
 int GetAvailableId(std::vector<ServerClient*>aClients, int num) {

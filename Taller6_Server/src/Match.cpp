@@ -10,9 +10,9 @@ void Match::Run() {
 	srand(time(NULL));
 	std::cout << "INICIANDO SERVIDOR..." << std::endl;
 	int clientID = 0;
-	std::vector<ServerClient*> aClients;
+	
 	sf::Socket::Status status;
-	sf::UdpSocket* socket = new sf::UdpSocket();
+	socket = new sf::UdpSocket();
 	status = socket->bind(gamePort);
 	if (status == sf::Socket::Done) {
 		std::cout << "Bindeado correctamente al puerto" << std::endl;
@@ -20,10 +20,9 @@ void Match::Run() {
 	else {
 		std::cout << "No se ha podido bindear al puerto" << std::endl;
 	}
-	bool end = false;
+	end = false;
 	bool sentEnd = false;
 	bool gameHadStarted = false;
-	std::queue<Event*> incomingInfo; //cola de paquetes entrantes
 	std::vector<std::vector<AccumMoveServer>> acumulatedMoves;
 	std::pair<short, short>initialPositions[4] = { { 200,200 },{ 200,400 },{ 800,200 },{ 800,400 } }; //formación inicial de los jugadores
 
@@ -46,8 +45,8 @@ void Match::Run() {
 		exit(0);
 	}
 
-	std::thread t(&ReceptionThread, &end, &incomingInfo, socket);
-	std::thread s(&PingThread, &end, &aClients, socket);
+	std::thread t(&Match::ReceptionThread, &end, &incomingInfo, socket);
+	std::thread s(&Match::PingThread, &end, &aClients, socket);
 	ballClock.restart();
 	while (!end) {
 		if (aClients.size() == numPlayers) {

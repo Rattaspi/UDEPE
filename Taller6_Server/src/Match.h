@@ -7,11 +7,15 @@
 #include "Utils.h"
 
 class Match {
-private:
+protected:
 	short gamePort;
+	std::queue<Event*> incomingInfo; //cola de paquetes entrantes
+	bool end;
+	sf::UdpSocket* socket;
+	std::vector<ServerClient*> aClients;
 
-	static void ReceptionThread(bool* end, std::queue<Event*>* incomingInfo, sf::UdpSocket* socket);
-	static void PingThread(bool* end, std::vector<ServerClient*>* aClients, sf::UdpSocket* socket);
+	void ReceptionThread(bool* end, std::queue<Event*>* incomingInfo, sf::UdpSocket* socket);
+	void PingThread(bool* end, std::vector<ServerClient*>* aClients, sf::UdpSocket* socket);
 	void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClient);
 	void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std::pair<short, short> ballPos);
 	void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta, int*, int*, std::vector<ServerClient*>*, sf::UdpSocket*, bool*);

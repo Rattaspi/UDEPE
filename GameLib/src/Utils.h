@@ -27,7 +27,7 @@ const int shootCoolDown = 500;
 const int victoryScore = 10;
 const std::pair<short, short> ballStartPos{windowWidth/2,300};
 
-void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
+static void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 	int index = -1;
 	for (int i = 0; i < aMoves->size(); i++) {
 		if (aMoves->at(i).idMove==id) {
@@ -40,7 +40,7 @@ void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {
 	}
 }
 
-ServerClient* GetServerClientWithIpPort(unsigned short port, std::string ip, std::vector<ServerClient*>*aClients) {
+static ServerClient* GetServerClientWithIpPort(unsigned short port, std::string ip, std::vector<ServerClient*>*aClients) {
 	if (aClients->size() > 0) {
 		for (int i = 0; i < aClients->size(); i++) {
 			if (aClients->at(i)->GetIP() == ip&&aClients->at(i)->GetPort() == port) {
@@ -54,7 +54,7 @@ ServerClient* GetServerClientWithIpPort(unsigned short port, std::string ip, std
 	return nullptr;
 }
 
-Client* GetClientWithId(int id, std::vector<Client*>aClients) {
+static Client* GetClientWithId(int id, std::vector<Client*>aClients) {
 	for (int i = 0; i < aClients.size(); i++) {
 		if (aClients[i]->id == id) {
 			return aClients[i];
@@ -81,7 +81,7 @@ Client* GetClientWithId(int id, std::vector<Client*>aClients) {
 //	}
 //}
 
-int GetIndexServerClientWithId(int id, std::vector<ServerClient*>*aClients) {
+static int GetIndexServerClientWithId(int id, std::vector<ServerClient*>*aClients) {
 
 	for (int i = 0; i < aClients->size(); i++) {
 		if (aClients->at(i)->id == id) {
@@ -91,7 +91,7 @@ int GetIndexServerClientWithId(int id, std::vector<ServerClient*>*aClients) {
 	return -1;
 }
 
-int GetIndexClientWithId(int id, std::vector<Client*>*aClients) {
+static int GetIndexClientWithId(int id, std::vector<Client*>*aClients) {
 
 	for (int i = 0; i < aClients->size(); i++) {
 		if (aClients->at(i)->id == id) {

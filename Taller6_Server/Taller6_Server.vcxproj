@@ -126,6 +126,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Main_T6Server.cpp" />
+    <ClCompile Include="src\Match.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Match.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

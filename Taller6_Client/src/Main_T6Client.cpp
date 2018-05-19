@@ -33,7 +33,7 @@ int main() {
 	font.loadFromFile("arial_narrow_7.ttf");
 	std::cout << "CLIENTE INICIADO" << std::endl;
 	std::string serverIp = "localhost";
-	short serverPort = 50000;
+	int serverPort = 50000;
 	sf::Socket::Status status;
 	sf::UdpSocket* socket = new sf::UdpSocket();
 	std::string command;

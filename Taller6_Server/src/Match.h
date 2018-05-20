@@ -8,6 +8,19 @@
 #include "Utils.h"
 
 
+class MatchInfo {
+public:
+	int matchId;
+	std::string gameName;
+	int connectedPlayers;
+	int maxPlayers;
+	MatchInfo(int id, std::string name, int mp) {
+		maxPlayers = mp;
+		gameName = name;
+		matchId = id;
+		connectedPlayers = 0;
+	}
+};
 
 class Match {
 

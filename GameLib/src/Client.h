@@ -97,6 +97,16 @@ public:
 
 };
 
+class User {
+public:
+	std::string userName;
+	std::string passWord;
+	User(std::string u , std::string p) {
+		userName = u;
+		passWord = p;
+	}
+};
+
 class ServerClient : public Client{
 private:
 	std::mutex mut;
@@ -104,6 +114,7 @@ private:
 	std::string ip;
 	std::vector<CriticalMessage> criticalVector; //POR ALGUNA RAZON NO PUEDO ACCEDER A ESTE VECTOR
 public:
+	User* associatedUser;
 	std::vector<AccumMoveServer> acumulatedMoves;
 	sf::Clock moveClock;
 	sf::Clock shootClock;
@@ -116,8 +127,26 @@ public:
 		this->position = position;
 		pingCounter.restart();
 		userName = "Player" + id;
+		criticalId = 0;
 	}
 
+	ServerClient() {
+		id = 0;
+		criticalId = 0;
+		userName = "";
+	}
+	
+	void SetIp(std::string ip) {
+		this->ip = ip;
+	}
+
+	void SetPort(short port) {
+		this->port = port;
+	}
+
+	void SetUserName(std::string name) {
+		userName = name;
+	}
 
 	unsigned short GetPort() {
 		return port;

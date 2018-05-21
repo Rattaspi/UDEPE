@@ -1,3 +1,4 @@
+#include "../stdafx.h"
 #include "Match.h"
 
 void Match::DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClient) {
@@ -522,10 +523,10 @@ void Match::Run() {
 	}
 }
 
-void Match::SetUp() {
+void Match::SetUp(short port) {
 	srand(time(NULL));
 	std::cout << "INICIANDO SERVIDOR..." << std::endl;
-	status = socket->bind(50000);
+	status = socket->bind(port);
 
 	if (status != sf::Socket::Done) {
 		std::cout << "No se ha podido vincular al puerto" << std::endl;

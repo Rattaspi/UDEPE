@@ -25,17 +25,46 @@ void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::st
 
 void LogIn(sf::UdpSocket* socket, std::string user, std::string password, sf::IpAddress, short port);
 
-void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string email);
+void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword, sf::IpAddress ip, short port);
+
+void ResetValues(int* selectedOption);
 
 sf::Font font;
 sf::Texture bgTex;
 sf::Sprite bgSprite;
+
+class MatchInfo {
+public:
+	int matchId;
+	std::string gameName;
+	int connectedPlayers;
+	int maxPlayers;
+	MatchInfo(int id, std::string name, int mp, int connectedPlayers) {
+		maxPlayers = mp;
+		gameName = name;
+		matchId = id;
+		this->connectedPlayers = connectedPlayers;
+	}
+
+	MatchInfo(int id, std::string name, int mp) {
+		maxPlayers = mp;
+		gameName = name;
+		matchId = id;
+		connectedPlayers = 0;
+	}
+
+};
+
+class MatchDetailedInfo :public MatchInfo{
+	std::vector<Client>clients;
+};
 
 int main() {
 	bgTex.loadFromFile("bg.jpg");
 	bgSprite.setTexture(bgTex);
 	font.loadFromFile("arial_narrow_7.ttf");
 
+	std::vector<std::string>aMsjs;
 
 	std::cout << "CLIENTE INICIADO" << std::endl;
 	std::string serverIp = "localhost";
@@ -45,6 +74,7 @@ int main() {
 	sf::UdpSocket* socket = new sf::UdpSocket();
 	std::string command;
 	int myId = 0;
+	int myMatchId = 0;
 	std::vector<int>acks;
 	std::pair<short, short> myCoordenates{ 0,0 };
 	std::pair<short, short> originalCoordenates{ 0,0 };
@@ -75,6 +105,7 @@ int main() {
 	int playerSpeed = 1;
 	bool down_key = false, up_key = false, right_key = false, left_key = false;
 	std::vector<sf::RectangleShape> mapLines; //guarda todas las lineas que forman el mapa.
+	std::vector<MatchInfo> matchesInfo;
 	std::queue<std::pair<short, short>> ballSteps;
 	
 	SetUpMapLines(&mapLines);
@@ -86,8 +117,8 @@ int main() {
 
 	sf::RenderWindow window(sf::VideoMode(windowWidth, windowHeight), "Cliente con ID "+myId);
 	std::vector<sf::CircleShape> playerRenders;
-	enum ProgramState { SERVERCHECK, LOGIN, MAIN_MENU,JOIN_MATCH, MATCH_CREATION, MATCH_ROOM,MATCH };
-	ProgramState programState = MAIN_MENU;
+	enum ProgramState { SERVERCHECK, LOGIN, MAIN_MENU,JOIN_MATCH, MATCH_CREATION, MATCH_PASS,MATCH_ROOM,MATCH };
+	ProgramState programState = LOGIN;
 
 	std::string myUsername="";
 	std::string myPassword="";
@@ -95,6 +126,9 @@ int main() {
 	std::string myRegisteredPassword = "";
 	std::string myConfirmedPassword = "";
 
+	std::string roomName = "";
+	std::string roomPass = "";
+	std::string goalsNumber = "";
 
 	int selectedOption=0;
 	bool logInAnswer = true;
@@ -157,7 +191,6 @@ int main() {
 
 				break;
 			}
-
 			case LOGIN: {
 
 				if (window.isOpen()) {
@@ -176,6 +209,7 @@ int main() {
 							imbs.Read(&accepted, boolBit);
 							if (accepted) {
 								programState = ProgramState::MAIN_MENU;
+								ResetValues(&selectedOption);
 							}
 							else {
 								std::cout << "Nombre de usuario y/o contraseña erroneos\n";
@@ -184,9 +218,10 @@ int main() {
 						}
 						case PacketType::REGISTER: {
 							bool accepted = false;
-
+							imbs.Read(&accepted, boolBit);
 							if (accepted) {
 								programState = ProgramState::MAIN_MENU;
+								ResetValues(&selectedOption);
 							}
 							else {
 								std::cout << "Error durante el registro\n";
@@ -199,8 +234,16 @@ int main() {
 						incomingInfo.pop();
 					}
 
+					
+
 					if (!logInAnswer&&logInClock.getElapsedTime().asSeconds()>0.3f) {
-						LogIn(socket, myUsername, myPassword, serverIp, serverPort);
+						if (myUsername.size() > 0 && myPassword.size() > 0) {
+							LogIn(socket, myUsername, myPassword, serverIp, serverPort);
+							std::cout << logInAnswer << std::endl;
+						}
+						else {
+							logInAnswer = true;
+						}
 						logInClock.restart();
 					}
 
@@ -245,7 +288,12 @@ int main() {
 								}
 								if (x >= 480 && x <= (480 + 300)) {
 									if (y >= 600 && y <= (600 + 45)) {
-										Register(socket, myRegisteredUsername, myRegisteredPassword, myConfirmedPassword);
+										if (myRegisteredPassword.size() > 0 && myRegisteredUsername.size() > 0 && myConfirmedPassword.size() > 0) {
+											Register(socket, myRegisteredUsername, myRegisteredPassword, myConfirmedPassword, serverIp, serverPort);
+										}
+										else {
+											std::cout << "Falta introducir agun dato\n";
+										}
 									}
 								}
 
@@ -265,7 +313,12 @@ int main() {
 									logInAnswer = false;
 								}
 								else {
-									Register(socket, myRegisteredUsername, myRegisteredPassword, myConfirmedPassword);
+									if (myRegisteredPassword.size() > 0 && myRegisteredUsername.size() > 0 && myConfirmedPassword.size() > 0) {
+										Register(socket, myRegisteredUsername, myRegisteredPassword, myConfirmedPassword, serverIp, serverPort);
+									}
+									else {
+										std::cout << "Falta introducir agun dato\n";
+									}
 								}
 							}
 							else if (evento.key.code == sf::Keyboard::BackSpace) {
@@ -295,22 +348,32 @@ int main() {
 							}
 							break;											
 						case sf::Event::TextEntered:
-							if (evento.text.unicode >= 32 && evento.text.unicode <= 126 && myUsername.length() < 20) {
+							if (evento.text.unicode >= 32 && evento.text.unicode <= 126) {
 								switch (selectedOption) {
 									case 0:
-										myUsername += (char)evento.text.unicode;
+										if (myUsername.length() < 20) {
+											myUsername += (char)evento.text.unicode;
+										}
 										break;
 									case 1:
-										myPassword += (char)evento.text.unicode;
+										if (myPassword.length() < 20) {
+											myPassword += (char)evento.text.unicode;
+										}
 										break;
 									case 2:
-										myRegisteredUsername += (char)evento.text.unicode;
+										if (myRegisteredUsername.length() < 20) {
+											myRegisteredUsername += (char)evento.text.unicode;
+										}
 										break;
 									case 3:
-										myRegisteredPassword += (char)evento.text.unicode;
+										if (myRegisteredPassword.length() < 20) {
+											myRegisteredPassword += (char)evento.text.unicode;
+										}
 										break;
 									case 4:
-										myConfirmedPassword += (char)evento.text.unicode;
+										if (myConfirmedPassword.length() < 20) {
+											myConfirmedPassword += (char)evento.text.unicode;
+										}
 										break;
 									default:
 										break;
@@ -373,6 +436,7 @@ int main() {
 
 					std::string starsPassword = "";
 					std::string starsRegisterPassword = "";
+					std::string starsRegisterConfirmPassword = "";
 
 					for (int i = 0; i < myPassword.size(); i++) {
 						starsPassword += "*";
@@ -382,6 +446,9 @@ int main() {
 						starsRegisterPassword += "*";
 					}
 
+					for (int i = 0; i < myConfirmedPassword.size(); i++) {
+						starsRegisterConfirmPassword += "*";
+					}
 
 
 					sf::Text* passwordText = new sf::Text("Password: " + starsPassword, font, 20);
@@ -401,7 +468,7 @@ int main() {
 					registerPasswordText->setFillColor(sf::Color::White);
 
 
-					sf::Text* emailText = new sf::Text("Confirm Password: " + myConfirmedPassword, font, 20);
+					sf::Text* emailText = new sf::Text("Confirm Password: " + starsRegisterConfirmPassword, font, 20);
 					emailText->setPosition(500, 400);
 					emailText->setFillColor(sf::Color::White);
 
@@ -443,112 +510,545 @@ int main() {
 
 			}
 			case MAIN_MENU: {
-				window.clear();
+				std::vector<sf::RectangleShape>rectangleShapes;
+				std::vector<sf::Text>matchNames;
+				std::vector<sf::Text>playersText;
 
+				sf::Text headerText1("Nombre de partida",font,40);
+				headerText1.setPosition(20, 15);
+				headerText1.setFillColor(sf::Color::White);
 
-				sf::Text JoinGameText("Join Game", font, 40);
-				float windowWidthf = windowWidth;
-				float windowHeightf = windowHeight;
+				sf::Text headerText2("Jugadores", font, 40);
+				headerText2.setPosition(windowWidth - 200, 15);
+				headerText2.setFillColor(sf::Color::White);
 
-				JoinGameText.setPosition(windowWidthf / 4-50, windowHeightf / 4);
-				JoinGameText.setFillColor(sf::Color::White);
+				if (selectedOption > matchesInfo.size()) {
+					selectedOption = matchesInfo.size() - 1;
+				}
 
-				sf::Text CreateGameText("Create Game", font, 40);
-				CreateGameText.setPosition((windowWidthf / 4) * 3-50, windowHeightf / 4);
-				CreateGameText.setFillColor(sf::Color::White);
+				if (matchesInfo.size() > 0) {
+					for (int i = 0; i < matchesInfo.size(); i++) {
+						sf::RectangleShape aRect(sf::Vector2f(windowWidth-200,100));
+						aRect.setPosition(100, 0 + aRect.getSize().y*(i + 1));
+						sf::Text aGameName(matchesInfo[i].gameName, font, 30);
+						aGameName.setPosition(aRect.getPosition().x + 15, aRect.getPosition().y + 15);
+						sf::Text aPlayerText(std::to_string(matchesInfo[i].connectedPlayers) + "/" + std::to_string(matchesInfo[i].maxPlayers), font, 30);
+						aPlayerText.setPosition(windowWidth - 200, aRect.getPosition().y + 15);
 
-
-				
-
-				//sf::RectangleShape rect1(sf::Vector2f(windowWidthf / 4, windowHeightf / 4));
-				sf::RectangleShape rect1(sf::Vector2f(400.0f, 100.0f));
-				rect1.setSize(sf::Vector2f(300, 100.0f));
-				rect1.setFillColor(sf::Color::Green);
-				rect1.setPosition(sf::Vector2f((windowWidthf / 4) - 100, (windowHeightf / 4) - 25));
-
-
-				//sf::RectangleShape rect2(sf::Vector2f((windowWidthf / 4)*3, (windowHeightf / 4)*3 - 50));
-				sf::RectangleShape rect2(sf::Vector2f(400.0f, 100.0f));
-				rect2.setSize(sf::Vector2f(300, 100.0f));
-				rect2.setPosition(sf::Vector2f((windowWidthf / 4) * 3 - 100, (windowHeightf / 4) - 25));
-				rect2.setFillColor(sf::Color::Green);
-
-
-				sf::RectangleShape rect3(sf::Vector2f(400.0f, 100.0f));
-				rect3.setSize(sf::Vector2f(400, 100.0f));
-				rect3.setPosition(sf::Vector2f((windowWidthf / 2)-rect3.getSize().x/2, ((windowHeightf / 4)*3)));
-				rect3.setFillColor(sf::Color::Red);
-
-				sf::Text disconnectText("Disconnect", font, 40);
-				disconnectText.setPosition(sf::Vector2f((windowWidthf / 2) - rect3.getSize().x / 2 + 100, ((windowHeightf / 4) * 3)+20));
-				CreateGameText.setFillColor(sf::Color::White);
-
-
-				sf::Event evento;
-
-				while (window.pollEvent(evento)) {
-					switch (evento.type) {
-					case sf::Event::Closed:
-						window.close();
-						socket->unbind();
-						end = true;
-						break;
-					case sf::Event::MouseButtonPressed:
-						if (evento.mouseButton.button == sf::Mouse::Left) {
-							int x = evento.mouseButton.x;
-							int y = evento.mouseButton.y;
-
-							if (y >= rect1.getPosition().y && y <= rect1.getPosition().y+rect1.getSize().y) {
-								if (x >= rect1.getPosition().x && x <= rect1.getPosition().x+rect1.getSize().x) {
-									//selectedOption = 0;
-								}
-								else if (x >= rect2.getPosition().x && x <= rect2.getPosition().x + rect2.getSize().x) {
-									programState = MATCH_CREATION;
-									//selectedOption = 1;
-								}
-							}
-
-							if (x >= rect3.getPosition().x&&x <= rect3.getPosition().x + rect3.getSize().x) {
-								if (y >= rect3.getPosition().y&&y <= rect3.getPosition().y + rect3.getSize().y) {
-
-									OutputMemoryBitStream ombs;
-									ombs.Write(PacketType::DISCONNECT,commandBits);
-
-									status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
-									
-									if (status == sf::Socket::Error) {
-										std::cout << "Error enviando desconexión\n";
-									}else{
-										programState = LOGIN;
-									}
-									
-									//std::cout << "DISCONNECT\n";
-								}
-							}
-
-
+						if (selectedOption == i) {
+							aRect.setFillColor(sf::Color::Yellow);
+							aGameName.setFillColor(sf::Color::Black);
+							aPlayerText.setFillColor(sf::Color::Black);
+						}
+						else {
+							aRect.setFillColor(sf::Color::Green);
+							aGameName.setFillColor(sf::Color::White);
+							aPlayerText.setFillColor(sf::Color::White);
 
 
 						}
+						rectangleShapes.push_back(aRect);
+						matchNames.push_back(aGameName);
+						playersText.push_back(aPlayerText);
 					}
 				}
 
-				window.draw(rect3);
-				window.draw(rect1);
-				window.draw(rect2);
-				window.draw(disconnectText);
-				window.draw(JoinGameText);
-				window.draw(CreateGameText);
-				window.display();
-				break; 
+				if (window.isOpen()) {
+					window.clear();
+
+					if (shootCounter.getElapsedTime().asSeconds() > 4.0f) {
+						shootCounter.restart();
+						OutputMemoryBitStream ombs;
+						ombs.Write(PacketType::UPDATEGAMELIST, commandBits);
+						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+						if (status == sf::Socket::Error) {
+							std::cout << "Error pidiendo actualizacion de partidas\n";
+						}
+						else {
+							std::cout << "Pidiendo actualizacion de paartidas\n";
+						}
+
+					}
+
+					if (!incomingInfo.empty()) {
+						Event infoReceived;
+						PacketType command = HELLO;
+						infoReceived = incomingInfo.front();
+						InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
+						imbs.Read(&command, commandBits);
+						switch (command) {
+						case PacketType::UPDATEGAMELIST: {
+							matchesInfo.clear();
+							int matchesSize = 0;
+
+							imbs.Read(&matchesSize, matchBits);
+
+							for (int i = 0; i < matchesSize; i++) {
+								int someClientSize = 0;
+								int anId = 0;
+								std::string someName = "";
+
+								imbs.Read(&someClientSize, playerSizeBits);
+								imbs.Read(&anId, matchBits);
+								imbs.ReadString(&someName);
+								
+								MatchInfo matchInfo(anId,someName,4,someClientSize);
+
+								matchesInfo.push_back(matchInfo);
+
+							}
+							break;
+
+						}
+						case PacketType::PING: {
+							OutputMemoryBitStream ombs;
+							ombs.Write(PacketType::ACKPING, commandBits);
+							status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+							if (status == sf::Socket::Error) {
+								std::cout << "Error enviando ACKPING\n";
+							}
+							else {
+								std::cout << "ENVIANDO ACKPING\n";
+							}
+
+							break;
+						}
+						default:
+							break;
+						}
+						incomingInfo.pop();
+					}
+
+
+					float windowWidthf = windowWidth;
+					float windowHeightf = windowHeight;
+
+
+					//sf::RectangleShape rect1(sf::Vector2f(windowWidthf / 4, windowHeightf / 4));
+					sf::RectangleShape rect1(sf::Vector2f(400.0f, 100.0f));
+					rect1.setSize(sf::Vector2f(300, 100.0f));
+					rect1.setFillColor(sf::Color::Green);
+					rect1.setPosition(sf::Vector2f((windowWidthf / 4) - 150, windowHeightf - rect1.getSize().y));
+
+
+					//sf::RectangleShape rect2(sf::Vector2f((windowWidthf / 4)*3, (windowHeightf / 4)*3 - 50));
+					sf::RectangleShape rect2(sf::Vector2f(400.0f, 100.0f));
+					rect2.setSize(sf::Vector2f(300, 100.0f));
+					rect2.setPosition(sf::Vector2f((windowWidthf / 4) * 3 - 100, windowHeightf-rect2.getSize().y));
+					rect2.setFillColor(sf::Color::Green);
+
+
+					sf::Text JoinGameText("Join Game", font, 40);
+					JoinGameText.setPosition(rect1.getPosition().x+20,rect1.getPosition().y+20);
+					JoinGameText.setFillColor(sf::Color::White);
+
+					sf::Text CreateGameText("Create Game", font, 40);
+					CreateGameText.setPosition(rect2.getPosition().x+20, rect2.getPosition().y+20);
+					CreateGameText.setFillColor(sf::Color::White);
+
+
+
+					sf::RectangleShape rect3(sf::Vector2f(400.0f, 100.0f));
+					rect3.setSize(sf::Vector2f(400, 100.0f));
+					rect3.setPosition(rect1.getPosition().x + rect1.getSize().x,rect1.getPosition().y);
+					rect3.setFillColor(sf::Color::Red);
+
+					sf::Text disconnectText("Disconnect", font, 40);
+					disconnectText.setPosition(sf::Vector2f(rect3.getPosition().x+40, rect3.getPosition().y+20));
+					CreateGameText.setFillColor(sf::Color::White);
+
+
+					sf::Event evento;
+
+					while (window.pollEvent(evento)) {
+						switch (evento.type) {
+						case sf::Event::Closed:
+							window.close();
+							socket->unbind();
+							end = true;
+							break;
+						case sf::Event::MouseButtonPressed:
+							if (evento.mouseButton.button == sf::Mouse::Left) {
+								int x = evento.mouseButton.x;
+								int y = evento.mouseButton.y;
+
+								for (int i = 0; i < matchesInfo.size(); i++) {
+									if (rectangleShapes.size() != i) {
+										if (x >= rectangleShapes[i].getPosition().x&&x <= rectangleShapes[i].getPosition().x + rectangleShapes[i].getSize().x) {
+											if (y >= rectangleShapes[i].getPosition().y&&y <= rectangleShapes[i].getPosition().y + rectangleShapes[i].getSize().y) {
+												selectedOption = i;
+											}
+										}
+									}
+								}
+
+								if (y >= rect1.getPosition().y && y <= rect1.getPosition().y + rect1.getSize().y) {
+									if (x >= rect1.getPosition().x && x <= rect1.getPosition().x + rect1.getSize().x) {
+										//selectedOption = 0;
+										myMatchId = matchesInfo[selectedOption].matchId;
+										programState = MATCH_ROOM;
+										aMsjs.clear();
+										ResetValues(&selectedOption);
+
+									}
+									else if (x >= rect2.getPosition().x && x <= rect2.getPosition().x + rect2.getSize().x) {
+
+										//OutputMemoryBitStream ombs;
+										//ombs.Write(PacketType::CREATEGAME,commandBits);
+										//socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+
+										programState = MATCH_CREATION;
+										ResetValues(&selectedOption);
+										//selectedOption = 1;
+									}
+								}
+
+								if (x >= rect3.getPosition().x&&x <= rect3.getPosition().x + rect3.getSize().x) {
+									if (y >= rect3.getPosition().y&&y <= rect3.getPosition().y + rect3.getSize().y) {
+
+										OutputMemoryBitStream ombs;
+										ombs.Write(PacketType::DISCONNECT, commandBits);
+
+										status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+										if (status == sf::Socket::Error) {
+											std::cout << "Error enviando desconexión\n";
+										}
+										else {
+											programState = LOGIN;
+											ResetValues(&selectedOption);
+
+										}
+
+										//std::cout << "DISCONNECT\n";
+									}
+								}
+
+
+
+
+							}
+							break;
+						}
+					}
+
+					window.draw(rect3);
+					window.draw(rect1);
+					window.draw(rect2);
+					window.draw(disconnectText);
+					window.draw(JoinGameText);
+					window.draw(CreateGameText);
+
+					window.draw(headerText1);
+					window.draw(headerText2);
+
+
+					for (int i = 0; i < matchesInfo.size(); i++) {
+						if (rectangleShapes.size() != i) {
+							window.draw(rectangleShapes[i]);
+						}
+						else {
+							std::cout << rectangleShapes.size()<<std::endl;
+						}
+
+						if (matchNames.size() != i) {
+							window.draw(matchNames[i]);
+						}
+
+						if (playersText.size() != i) {
+							window.draw(playersText[i]);
+						}
+					}
+
+
+					window.display();
+					break;
+				}
 			}
 			case MATCH_CREATION: {
-				window.clear();
+				if (window.isOpen()) {
+					window.clear();
+
+					if (!incomingInfo.empty()) {
+						Event infoReceived;
+						PacketType command = HELLO;
+						infoReceived = incomingInfo.front();
+						InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
+						imbs.Read(&command, commandBits);
+						switch (command) {
+						case PacketType::PING: {
+							OutputMemoryBitStream ombs;
+							ombs.Write(PacketType::ACKPING, commandBits);
+							status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+							if (status == sf::Socket::Error) {
+								std::cout << "Error enviando ACKPING\n";
+							}
+
+							break;
+						}
+						default:
+							break;
+						}
+						incomingInfo.pop();
+					}
+					sf::RectangleShape roomNameRect(sf::Vector2f(400,60));
+					roomNameRect.setPosition(windowWidth / 2 - roomNameRect.getSize().x/2, windowHeight / 8-roomNameRect.getSize().y/2);
+					roomNameRect.setFillColor(sf::Color::Green);
+
+					sf::Text roomNameTextHeader("Nombre de sala", font, 30);
+					roomNameTextHeader.setFillColor(sf::Color::White);
+					roomNameTextHeader.setPosition(sf::Vector2f(roomNameRect.getPosition().x + 20, roomNameRect.getPosition().y -60));
+
+					sf::Text roomNameText(roomName,font,30);
+					roomNameText.setFillColor(sf::Color::White);
+					roomNameText.setPosition(sf::Vector2f(roomNameRect.getPosition().x+50,roomNameRect.getPosition().y));
+
+					sf::RectangleShape passRect(sf::Vector2f(400, 60));
+					passRect.setPosition(windowWidth / 2 - passRect.getSize().x / 2, 50+(windowHeight / 8)*2 - passRect.getSize().y / 2);
+					passRect.setFillColor(sf::Color::Green);
+
+					sf::Text passText("Contraseña",font,30);
+					passText.setFillColor(sf::Color::White);
+					passText.setPosition(sf::Vector2f(passRect.getPosition().x + 20, passRect.getPosition().y - 60));
+
+					sf::Text passTextHeader(roomPass, font, 30);
+					passTextHeader.setFillColor(sf::Color::White);
+					passTextHeader.setPosition(sf::Vector2f(passRect.getPosition().x + 50, passRect.getPosition().y ));
+
+
+					sf::RectangleShape goalsNumberRect(sf::Vector2f(400, 60));
+					goalsNumberRect.setPosition(windowWidth / 2 - goalsNumberRect.getSize().x / 2, 100 + (windowHeight / 8) * 3 - goalsNumberRect.getSize().y / 2);
+					goalsNumberRect.setFillColor(sf::Color::Green);
+
+					sf::Text goalNumbersTextHeader("Numero de goles", font, 30);
+					goalNumbersTextHeader.setFillColor(sf::Color::White);
+					goalNumbersTextHeader.setPosition(sf::Vector2f(goalsNumberRect.getPosition().x + 20, goalsNumberRect.getPosition().y - 60));
+
+
+					sf::Text goalsNumberText(goalsNumber, font, 30);
+					goalsNumberText.setFillColor(sf::Color::White);
+					goalsNumberText.setPosition(sf::Vector2f(goalsNumberRect.getPosition().x + 50, goalsNumberRect.getPosition().y ));
 
 
 
+					sf::RectangleShape cancelRect(sf::Vector2f(400, 100));
+					cancelRect.setFillColor(sf::Color::Green);
+					cancelRect.setPosition(windowWidth / 4 - cancelRect.getSize().x / 2, 150 + (windowHeight / 8) * 5 - cancelRect.getSize().y / 2);
 
-				window.display();
+					sf::Text cancelText("Cencelar", font, 30);
+					cancelText.setFillColor(sf::Color::White);
+					cancelText.setPosition(cancelRect.getPosition().x + 30, cancelRect.getPosition().y + cancelRect.getSize().y / 2);
+
+					sf::RectangleShape createRect(sf::Vector2f(400, 100));
+					createRect.setFillColor(sf::Color::Green);
+					createRect.setPosition((windowWidth / 4)*3 - createRect.getSize().x / 2, 150 + (windowHeight / 8) * 5 - createRect.getSize().y / 2);
+
+
+					sf::Text createText("Crear", font, 30);
+					createText.setFillColor(sf::Color::White);
+					createText.setPosition(createRect.getPosition().x + 30, createRect.getPosition().y + createRect.getSize().y / 2);
+
+
+					sf::Event evento;
+					while (window.pollEvent(evento)) {
+						switch (evento.type) {
+						case sf::Event::Closed:
+							window.close();
+							socket->unbind();
+							end = true;
+							break;
+						case sf::Event::KeyPressed:
+							 if (evento.key.code == sf::Keyboard::BackSpace) {
+								switch (selectedOption) {
+								case 0:
+									roomName = roomName.substr(0, roomName.size() - 1);
+									break;
+								case 1:
+									roomPass = roomPass.substr(0, roomPass.size() - 1);
+									break;
+								case 2:
+									goalsNumber = goalsNumber.substr(0, goalsNumber.size() - 1);
+									break;
+								default:
+									break;
+								}
+							}
+							else if (evento.key.code == sf::Keyboard::Tab) {
+								selectedOption++;
+								selectedOption = selectedOption % 3;
+							}
+							break;
+						case sf::Event::TextEntered:
+							if (evento.text.unicode >= 32 && evento.text.unicode <= 126) {
+								switch (selectedOption) {
+								case 0:
+									if (roomName.size() < 20) {
+										roomName += (char)evento.text.unicode;
+									}
+									break;
+								case 1:
+									if (roomPass.size() < 20) {
+										roomPass += (char)evento.text.unicode;
+									}
+									break;
+								case 2:
+									if (evento.text.unicode >= 48 && evento.text.unicode <= 57) {
+										if (goalsNumber.size() < 2) {
+											goalsNumber += (char)evento.text.unicode;
+										}
+									}
+									break;
+								default:
+									break;
+								}
+							}
+							break;
+						case sf::Event::MouseButtonPressed:
+							if (evento.mouseButton.button == sf::Mouse::Left) {
+								int x = evento.mouseButton.x;
+								int y = evento.mouseButton.y;
+
+								if (x >= roomNameRect.getPosition().x&&x <= roomNameRect.getPosition().x + roomNameRect.getSize().x) {
+									if (y >= roomNameRect.getPosition().y&&y <= roomNameRect.getPosition().y + roomNameRect.getSize().y) {
+										selectedOption = 0;
+									}
+									else if (y >= passRect.getPosition().y&&y <= passRect.getPosition().y + passRect.getSize().y) {
+										selectedOption = 1;
+									}
+									else if (y >= goalsNumberRect.getPosition().y&&y <= goalsNumberRect.getPosition().y + goalsNumberRect.getSize().y) {
+										selectedOption = 2;
+									}
+
+								}
+
+								if (y >= cancelRect.getPosition().y&&y <= cancelRect.getPosition().y+cancelRect.getSize().y) {
+									if (x >= cancelRect.getPosition().x&&x <= cancelRect.getPosition().x + cancelRect.getSize().x) {
+										 roomName = "";
+										 roomPass = "";
+										 goalsNumber = "";
+										 programState = MAIN_MENU;
+										 ResetValues(&selectedOption);
+									}
+									else if (x >= createRect.getPosition().x&&x <= createRect.getPosition().x + createRect.getSize().x) {
+										programState = MATCH_ROOM;
+										ResetValues(&selectedOption);
+									}
+								}
+
+
+							}
+							break;
+						}
+					}
+
+					window.draw(roomNameRect);
+					window.draw(roomNameText);
+					window.draw(roomNameTextHeader);
+
+					window.draw(passRect);
+					window.draw(passTextHeader);
+					window.draw(passText);
+
+					window.draw(goalsNumberRect);
+					window.draw(goalsNumberText);
+					window.draw(goalNumbersTextHeader);
+
+					window.draw(cancelRect);
+					window.draw(cancelText);
+
+					window.draw(createRect);
+					window.draw(createText);
+
+					window.display();
+				}
+				break;
+			}
+			case MATCH_ROOM: {
+				if (window.isOpen()) {
+					window.clear();
+
+					if (!incomingInfo.empty()) {
+						Event infoReceived;
+						PacketType command = HELLO;
+						infoReceived = incomingInfo.front();
+						InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
+						imbs.Read(&command, commandBits);
+						switch (command) {
+						case PacketType::PING: {
+							OutputMemoryBitStream ombs;
+							ombs.Write(PacketType::ACKPING, commandBits);
+							status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+							if (status == sf::Socket::Error) {
+								std::cout << "Error enviando ACKPING\n";
+							}
+
+							break;
+						}
+						default:
+							break;
+						}
+						incomingInfo.pop();
+					}
+
+					std::vector<sf::Text>chat;
+					for (int i = 0; i < aMsjs.size(); i++) {
+						sf::Text aText(aMsjs[i],font,12);
+						aText.setPosition((float)windowWidth/2,50+i*16);
+						chat.push_back(aText);
+					}
+
+
+					sf::RectangleShape rect2(sf::Vector2f(50, windowHeight));
+					rect2.setPosition((float)windowWidth/2,0);
+					rect2.setFillColor(sf::Color::Cyan);
+
+					sf::RectangleShape rect1(sf::Vector2f(200,100));
+					rect1.setPosition(0, windowHeight - rect1.getSize().y - 40);
+					rect1.setFillColor(sf::Color::Green);
+
+					sf::Text rect1Header("Ready",font,40);
+					rect1Header.setPosition(rect1.getPosition().x+100-20, rect1.getPosition().y+50-20);
+					rect1Header.setFillColor(sf::Color::Black);
+
+					sf::Event evento;
+
+					while (window.pollEvent(evento)) {
+						switch (evento.type) {
+						case sf::Event::Closed:
+							window.close();
+							socket->unbind();
+							end = true;
+							break;
+						case sf::Event::MouseButtonPressed:
+							if (evento.mouseButton.button == sf::Mouse::Left) {
+								int x = evento.mouseButton.x;
+								int y = evento.mouseButton.y;
+
+								if (y >= rect1.getPosition().y && y <= rect1.getPosition().y + rect1.getSize().y) {
+									if (x >= rect1.getPosition().x && x <= rect1.getPosition().x + rect1.getSize().x) {
+										//PULSADO READY
+
+									}
+								}
+							}
+							break;
+						}
+					}
+
+					for (int i = 0; i < chat.size(); i++) {
+						window.draw(chat[i]);
+					}
+
+					window.draw(rect2);
+					window.draw(rect1);
+					window.draw(rect1Header);
+					window.display();
+				}
 				break;
 			}
 			case MATCH: {
@@ -1259,11 +1759,27 @@ void LogIn(sf::UdpSocket* socket, std::string user, std::string password,sf::IpA
 	}
 }
 
-void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword) {
-
+void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword,sf::IpAddress ip, short port) {
+	sf::Socket::Status status;
 	if (confirmedPassword == password) {
 
 		//TODO
-		std::cout << "Trying to Register\n";// with UserName " + user + " and password " + password + "\n";
+		//std::cout << "Trying to Register\n";// with UserName " + user + " and password " + password + "\n";
+		OutputMemoryBitStream ombs;
+		ombs.Write(PacketType::REGISTER, commandBits);
+		ombs.WriteString(user);
+		ombs.WriteString(password);
+		status=socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), ip, port);
+		if (status == sf::Socket::Error) {
+			std::cout << "Error enviando mensaje de registro\n";
+		}
 	}
+	else {
+		std::cout << "Passwords do not match";// with UserName " + user + " and password " + password + "\n";
+
+	}
+}
+
+void ResetValues(int* selectedOption) {
+	*selectedOption = 0;
 }

@@ -3,8 +3,9 @@
 #include "OutputMemoryBitStream.h"
 #include "InputMemoryBitStream.h"
 
-enum PacketType {HELLO, WELCOME, NEWPLAYER, DISCONNECT, ACK, PING, ACKPING, ACKMOVE, SHOOT, GAMEOVER, GAMESTART, GOAL, NOTWELCOME, MOVE, MOVEBALL, JOINGAME, CREATEGAME, UPDATEGAMELIST, LOGIN, REGISTER};
+enum PacketType {HELLO, WELCOME, NEWPLAYER, DISCONNECT, ACK, PING, ACKPING, ACKMOVE, SHOOT, GAMEOVER, GAMESTART, GOAL, NOTWELCOME, MOVE, MOVEBALL, JOINGAME, CREATEGAME, UPDATEGAMELIST, LOGIN, REGISTER, MSG};
 const int commandBits = 5;
+const int matchBits = 4;
 const int maxBufferSize = 1300;
 const int playerSizeBits = 3;
 const int coordsbits = 10;

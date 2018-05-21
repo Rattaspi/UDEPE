@@ -1,4 +1,23 @@
 #include "Match.h"
+//#define MAX_MATCHES 10
+
+short GetFreePort(std::map<short,bool>map) {
+	for (std::map<short, bool>::iterator it = map.begin(); it != map.end(); ++it) {
+		if (!it->second) {
+			return it->first;
+		}
+	}
+
+}
+
+int GetFreeId(std::map<int, bool>map) {
+	for (std::map<int, bool>::iterator it = map.begin(); it != map.end(); ++it) {
+		if (!it->second) {
+			return it->first;
+		}
+	}
+
+}
 
 void ReceptionThreadServer(sf::UdpSocket* socket, bool*end, std::queue<Event*>*incomingInfo) {
 	sf::Socket::Status status;
@@ -71,7 +90,7 @@ void PingThread(Match* match) {
 
 
 int main() {
-
+	bool once = false;
 	std::vector<User> users;
 
 	User devildra("devildrake","ab123");
@@ -84,10 +103,23 @@ int main() {
 	users.push_back(ah97);
 	users.push_back(urisel);
 
+	std::map<short, bool>portMap;
+	std::map<int, bool> idMap;
+	for (int i = 0; i < 16; i++) {
+		portMap[50001 + i] = false;
+		idMap[i] = false;
+	}
 
 	sf::UdpSocket* socket=new sf::UdpSocket();
 	sf::Socket::Status status;
 	std::queue<Event*> incomingInfo;
+	std::vector<Match> aMatches;
+
+	//std::vector<std::thread*>receptionThreads;
+	std::vector<std::thread>receptionThreads;
+	//Match Reception Threads
+	//std::thread mrt[MAX_MATCHES];
+
 	bool end = false;
 	status = socket->bind(50000);
 	if (status == sf::Socket::Error) {
@@ -96,6 +128,24 @@ int main() {
 	}
 
 	std::thread r(&ReceptionThreadServer, socket, &end, &incomingInfo);
+
+
+
+
+	Match aMatch1;
+	short aPort = GetFreePort(portMap);
+	int anId = GetFreeId(idMap);
+	aMatch1.gameName = "Match Port " + std::to_string(aPort);
+	aMatch1.matchId = anId;
+	aMatch1.SetUp(aPort);
+	portMap[aPort] = true;
+	idMap[anId] = true;
+	receptionThreads.push_back(std::thread(&ReceptionThread, &aMatch1));
+
+	aMatches.push_back(aMatch1);
+
+	sf::Clock pingTimer;
+
 
 	while (!end) {
 		std::vector<ServerClient*>connectedClients;
@@ -113,12 +163,11 @@ int main() {
 			remotePort = infoReceived.GetPort();
 			OutputMemoryBitStream ombs;
 
-
 			switch (command) {
 			case PacketType::PING:
-				
-				ombs.Write(ACKPING,commandBits);
-				status=socket->send(ombs.GetBufferPtr(),ombs.GetByteLength(),remoteIP, remotePort);
+
+				ombs.Write(ACKPING, commandBits);
+				status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
 
 				if (status == sf::Socket::Error) {
 					std::cout << "ERROR ENVIANDO\n";
@@ -128,6 +177,17 @@ int main() {
 				}
 
 				break;
+			case PacketType::ACKPING: {
+				std::cout << "Recibido ACKPING\n";
+
+				ServerClient* aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &connectedClients);
+				if (aClient != nullptr) {
+					aClient->pingCounter.restart();
+					std::cout << "Recibido ACKPING de jugador " + aClient->userName<<"\n";
+				}
+
+				break; 
+			}
 			case PacketType::DISCONNECT: {
 
 				int index = -1;
@@ -142,10 +202,49 @@ int main() {
 
 				break;
 			}
+			case PacketType::REGISTER: {
+				std::string aUserName="";
+				std::string aPassWord="";
+				imbs.ReadString(&aUserName);
+				imbs.ReadString(&aPassWord);
+
+				bool found = false;
+				for (int i = 0; i < users.size(); i++) {
+					if (users[i].userName == aUserName) {
+						found = true;
+					}
+				}
+				OutputMemoryBitStream ombs;
+
+				ombs.Write(PacketType::REGISTER, commandBits);
+
+				if (!found) {
+					User user(aUserName, aPassWord);
+					users.push_back(user);
+
+					//users[index].connected = true;
+					ServerClient* aClient = new ServerClient(remoteIP.toString(), remotePort, 0, std::pair<short, short>(0, 0));
+					aClient->SetUserName(users[users.size()-1].userName);
+					connectedClients.push_back(aClient);
+
+
+					ombs.Write(true, boolBit);
+				}
+				else {
+					ombs.Write(false, boolBit);
+				}
+
+				status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
+
+				if (status == sf::Socket::Error) {
+					std::cout << "Error enviando respuesta a registro";
+				}
+				break;
+			}			   
 			case PacketType::LOGIN: {
 				ombs.Write(PacketType::LOGIN, commandBits);
 				std::string userName = "";
-				std::string passWord= "";
+				std::string passWord = "";
 
 				imbs.ReadString(&userName);
 				imbs.ReadString(&passWord);
@@ -153,7 +252,7 @@ int main() {
 
 
 				for (int i = 0; i < users.size(); i++) {
-					std::cout << "Recibido usuario " << userName <<", comparando con " << users[i].userName << std::endl;
+					std::cout << "Recibido usuario " << userName << ", comparando con " << users[i].userName << std::endl;
 
 					if (users[i].userName == userName) {
 						std::cout << "Este usuario existe\n";
@@ -165,10 +264,16 @@ int main() {
 				if (index >= 0) {
 					if (users[index].passWord == passWord) {
 						//users[index].connected = true;
-						ServerClient* aClient = new ServerClient(remoteIP.toString(),remotePort,0,std::pair<short,short>(0,0));
+						ServerClient* aClient = new ServerClient(remoteIP.toString(), remotePort, 0, std::pair<short, short>(0, 0));
 						aClient->SetUserName(users[index].userName);
 
-						connectedClients.push_back(aClient);
+
+						if (GetServerClientWithIpPort(remotePort, remoteIP.toString(), &connectedClients) == nullptr) {
+							connectedClients.push_back(aClient);
+						}
+						else {
+							std::cout << "Cliente ya constaba como conectado\n";
+						}
 
 						//ServerClient aClient;
 						//aClient.SetUserName(users[index].userName);
@@ -191,11 +296,92 @@ int main() {
 
 				break;
 			}
+			case PacketType::CREATEGAME:{
+
+				Match aMatch;
+				short aPort= GetFreePort(portMap);
+				int anId = GetFreeId(idMap);
+				aMatch.gameName = "Match Port " + std::to_string(aPort);
+				aMatch.matchId = anId;
+				aMatch.SetUp(aPort);
+				portMap[aPort] = true;
+				idMap[anId] = true;
+				receptionThreads.push_back(std::thread(&ReceptionThread, &aMatch));
+
+				aMatches.push_back(aMatch);
+				//LUEGO HABRA QUE ACORDARSE DE LIBERAR IDS Y PUERTOS CUANDO SE BORREN PARTIDAS
+				ombs.Write(PacketType::UPDATEGAMELIST, commandBits);
+				ombs.Write((int)aMatches.size(), matchBits);
+				for (int i = 0; i < aMatches.size(); i++) {
+					ombs.Write((int)aMatches[i].aClients.size(), playerSizeBits);
+					ombs.Write(aMatches[i].matchId, matchBits);
+					ombs.WriteString(aMatches[i].gameName);
+				}
+
+				status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
+
+				if (status == sf::Socket::Error) {
+					std::cout << "Error enviando info de matches\n";
+				}
+
+
+
+				break;
+			}
+			case PacketType::UPDATEGAMELIST:{
+				ombs.Write(PacketType::UPDATEGAMELIST, commandBits);
+				ombs.Write((int)aMatches.size(), matchBits);
+				for (int i = 0; i < aMatches.size(); i++) {
+					ombs.Write((int)aMatches[i].aClients.size(), playerSizeBits);
+					ombs.Write(aMatches[i].matchId, matchBits);
+					ombs.WriteString(aMatches[i].gameName);
+				}
+				
+				status = socket->send(ombs.GetBufferPtr(),ombs.GetByteLength(),remoteIP, remotePort);
+
+				if (status == sf::Socket::Error) {
+					std::cout << "Error enviando info de matches\n";
+				}
+				else {
+					std::cout << "Respondiendo info de matches\n";
+
+				}
+
+
+				break;
+			}
 			default:
 				break;
 			}
 			incomingInfo.pop();
 		}
+
+		//std::cout << aMatches.size()<<"\n";
+
+		//int anIndex = -1;
+		//for (int i = 0; i < aMatches.size(); i++) {
+		//	if (aMatches[i].aClients.size() == 0) {
+		//		anIndex = i;
+		//	}
+		//}
+
+		//if (!once) {
+		//	once = true;
+		//	Match aMatch;
+		//	aMatch.SetUp(50001);
+		//	aMatch.end = false;
+		//	aMatches.push_back(aMatch);
+		//	std::thread t(&ReceptionThread, &aMatch);
+		//	receptionThreads.push_back(&t);
+		//}
+
+		//if (anIndex > 0) {
+		//	aMatches[anIndex].end = true;
+		//	aMatches[anIndex].socket->unbind();
+		//	receptionThreads[anIndex]->join();
+		//	//receptionThreads.erase(receptionThreads.begin() + anIndex);
+		//	aMatches.erase(aMatches.begin() + anIndex);
+		//}
 
 
 		//Match match;
@@ -210,6 +396,57 @@ int main() {
 
 		//s.join();
 		//t.join();
+
+		std::cout << pingTimer.getElapsedTime().asSeconds()<<" segundos \n";
+
+		if (pingTimer.getElapsedTime().asSeconds() >= 5) {
+			OutputMemoryBitStream ombs;
+			ombs.Write(PING, commandBits);
+			for (int i = 0; i < connectedClients.size(); i++) {
+				status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), connectedClients[i]->GetIP(), connectedClients[i]->GetPort());
+				if (status == sf::Socket::Error) {
+					std::cout << "Error enviando Ping\n";
+				}
+				else {
+					std::cout << "Enviando ping";
+				}
+			}
+			pingTimer.restart();
+		}
+
+		std::queue<int>idsToDisconnect;
+		for (int i = 0; i < connectedClients.size(); i++) {
+			if (connectedClients[i]->pingCounter.getElapsedTime().asSeconds() > 40) {
+				idsToDisconnect.push(connectedClients[i]->id);
+			}
+		}
+
+		while (idsToDisconnect.size() > 0) {
+			int id = idsToDisconnect.front();
+			int index = -1;
+			for (int i = 0; i < connectedClients.size(); i++) {
+				if (connectedClients[i]->id == id) {
+					index = i;
+				}
+			}
+
+			if (index > -1) {
+				delete connectedClients[index];
+				connectedClients.erase(connectedClients.begin() + index);
+			}
+			std::cout << "Desconectando un jugador\n";
+			idsToDisconnect.pop();
+		}
+
+	}
+
+	//for (int i = 0; i < MAX_MATCHES; i++) {
+	//	mrt[i].join();
+	//}
+
+	while (receptionThreads.size()>0) {
+		receptionThreads[0].join();
+		receptionThreads.erase(receptionThreads.begin());
 	}
 
 	socket->unbind();

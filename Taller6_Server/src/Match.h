@@ -1,30 +1,20 @@
 #pragma once
-#include <Client.h>
+#include "Client.h"
 #include <queue>
 #include <thread>
-#include <Event.h>
+#include "Event.h""
 #include <random>
 #include <time.h>
 #include "Utils.h"
 
 
-class MatchInfo {
-public:
-	int matchId;
-	std::string gameName;
-	int connectedPlayers;
-	int maxPlayers;
-	MatchInfo(int id, std::string name, int mp) {
-		maxPlayers = mp;
-		gameName = name;
-		matchId = id;
-		connectedPlayers = 0;
-	}
-};
+
 
 class Match {
 
 public:
+	int matchId;
+	std::string gameName;
 	sf::Clock criticalClock;
 	int clientID = 0;
 	std::vector<ServerClient*> aClients;
@@ -48,7 +38,7 @@ public:
 	int leftScore = 0;
 	int rightScore = 0;
 	void Run();
-	void SetUp();
+	void SetUp(short);
 	void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClient);
 	void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std::pair<short, short> ballPos);
 	void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta, int*, int*, std::vector<ServerClient*>*, sf::UdpSocket*, bool*);

@@ -1,1 +1,21 @@
-﻿  Taller6_Client.vcxproj -> C:\Users\David-2\Desktop\UDEPE\x64\Debug\Taller6_Client.exe
+﻿  Main_T6Client.cpp
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(159): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(205): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(528): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(580): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(814): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1046): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1072): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1077): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1157): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1202): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1235): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1345): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1346): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1626): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1634): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1797): warning C4244: 'argument': conversion from 'unsigned int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1820): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_client\src\main_t6client.cpp(1821): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+  Taller6_Client.vcxproj -> E:\_ENTI\Redes\UDP\x64\Debug\Taller6_Client.exe
+  Taller6_Client.vcxproj -> E:\_ENTI\Redes\UDP\x64\Debug\Taller6_Client.pdb (Partial PDB)

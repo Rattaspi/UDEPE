@@ -1,70 +1,36 @@
 ﻿  Match.cpp
-c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(10): warning C4244: 'argumento': conversión de 'time_t' a 'unsigned int'; posible pérdida de datos
-c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(97): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(136): warning C4267: 'inicializando': conversión de 'size_t' a 'int'; posible pérdida de datos
-c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(177): warning C4267: 'inicializando': conversión de 'size_t' a 'int'; posible pérdida de datos
-c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(252): warning C4244: '=': conversión de 'int' a 'float'; posible pérdida de datos
-c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(253): warning C4244: '=': conversión de 'int' a 'float'; posible pérdida de datos
-c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\utility(188): warning C4244: 'inicializando': conversión de 'int' a 'float'; posible pérdida de datos
-  c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(30): note: vea la referencia a la creación de instancias de plantilla de función 'std::pair<float,float>::pair<int,int,void,0>(_Other1 &&,_Other2 &&) noexcept' que se está compilando
-          with
-          [
-              _Other1=int,
-              _Other2=int
-          ]
-  c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(30): note: vea la referencia a la creación de instancias de plantilla de función 'std::pair<float,float>::pair<int,int,void,0>(_Other1 &&,_Other2 &&) noexcept' que se está compilando
-          with
-          [
-              _Other1=int,
-              _Other2=int
-          ]
-c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\utility(139): warning C4244: 'inicializando': conversión de 'const float' a 'short'; posible pérdida de datos
-  c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(74): note: vea la referencia a la creación de instancias de plantilla de función 'std::pair<short,short>::pair<float,float,void,0>(const std::pair<float,float> &)' que se está compilando
-  c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(74): note: vea la referencia a la creación de instancias de plantilla de función 'std::pair<short,short>::pair<float,float,void,0>(const std::pair<float,float> &)' que se está compilando
-c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thr\xthread(240): error C2672: 'std::invoke': no se encontró una función sobrecargada que coincida
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thr\xthread(248): note: vea la referencia a la creación de instancias de plantilla de función 'void std::_LaunchPad<_Target>::_Execute<0,1,2,3>(std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<_Ty>> *,sf::UdpSocket *),bool *,std::vector<_Ty,std::allocator<_Ty>> *,sf::UdpSocket *> &,std::integer_sequence<unsigned __int64,0,1,2,3>)' que se está compilando
-          with
-          [
-              _Target=std::unique_ptr<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>,std::default_delete<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>>>,
-              _Ty=ServerClient *
-          ]
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thr\xthread(247): note: vea la referencia a la creación de instancias de plantilla de función 'void std::_LaunchPad<_Target>::_Execute<0,1,2,3>(std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<_Ty>> *,sf::UdpSocket *),bool *,std::vector<_Ty,std::allocator<_Ty>> *,sf::UdpSocket *> &,std::integer_sequence<unsigned __int64,0,1,2,3>)' que se está compilando
-          with
-          [
-              _Target=std::unique_ptr<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>,std::default_delete<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>>>,
-              _Ty=ServerClient *
-          ]
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thr\xthread(244): note: durante la compilación de la función miembro de plantilla clase de 'void std::_LaunchPad<_Target>::_Run(std::_LaunchPad<_Target> *) noexcept'
-          with
-          [
-              _Target=std::unique_ptr<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>,std::default_delete<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>>>
-          ]
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thr\xthread(232): note: vea la referencia a la creación de instancias de plantilla de función 'void std::_LaunchPad<_Target>::_Run(std::_LaunchPad<_Target> *) noexcept' que se está compilando
-          with
-          [
-              _Target=std::unique_ptr<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>,std::default_delete<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>>>
-          ]
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thr\xthread(259): note: vea la referencia a la creación de instancias de plantilla clase de 'std::_LaunchPad<_Target>' que se está compilando
-          with
-          [
-              _Target=std::unique_ptr<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>,std::default_delete<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>>>
-          ]
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thread(48): note: vea la referencia a la creación de instancias de plantilla de función 'void std::_Launch<std::unique_ptr<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<_Ty>> *,sf::UdpSocket *),bool *,std::vector<_Ty,std::allocator<_Ty>> *,sf::UdpSocket *>,std::default_delete<std::tuple<void (__cdecl Match::* )(bool *,std::vector<_Ty,std::allocator<_Ty>> *,sf::UdpSocket *),bool *,std::vector<_Ty,std::allocator<_Ty>> *,sf::UdpSocket *>>>>(_Thrd_t *,_Target &&)' que se está compilando
-          with
-          [
-              _Ty=ServerClient *,
-              _Target=std::unique_ptr<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>,std::default_delete<std::tuple<void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *),bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *>>>
-          ]
-  c:\users\david-2\documents\udepe\taller6_server\src\match.cpp(49): note: vea la referencia a la creación de instancias de plantilla de función 'std::thread::thread<void(__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<_Ty>> *,sf::UdpSocket *),bool*,std::vector<_Ty,std::allocator<_Ty>>*,sf::UdpSocket*&,void>(_Fn &&,bool *&&,std::vector<_Ty,std::allocator<_Ty>> *&&,sf::UdpSocket *&)' que se está compilando
-          with
-          [
-              _Ty=ServerClient *,
-              _Fn=void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<ServerClient *>> *,sf::UdpSocket *)
-          ]
-c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thr\xthread(240): error C2893: No se pudo especializar la plantilla de función 'unknown-type std::invoke(_Callable &&,_Types &&...) noexcept(<expr>)'
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thr\xthread(240): note: Con los siguientes argumentos de plantilla:
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thr\xthread(240): note: '_Callable=void (__cdecl Match::* )(bool *,std::vector<ServerClient *,std::allocator<_Ty>> *,sf::UdpSocket *)'
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\thr\xthread(240): note: '_Types={bool *, std::vector<ServerClient *,std::allocator<_Ty>> *, sf::UdpSocket *}'
+e:\_enti\redes\udp\taller6_server\src\match.h(4): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+e:\_enti\redes\udp\taller6_server\src\match.cpp(1114): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
   Main_T6Server.cpp
-c:\users\david-2\documents\udepe\taller6_server\src\main_t6server.cpp(4): warning C4309: 'argumento': truncamiento de valor constante
-  Generando código...
+e:\_enti\redes\udp\taller6_server\src\match.h(4): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(87): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(422): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(653): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(808): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(809): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(656): warning C4101: 'status': unreferenced local variable
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(995): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(1036): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(1076): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(1079): warning C4101: 'status': unreferenced local variable
+c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\utility(188): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+  e:\_enti\redes\udp\taller6_server\src\match.h(35): note: see reference to function template instantiation 'std::pair<float,float>::pair<int,int,void,0>(_Other1 &&,_Other2 &&) noexcept' being compiled
+          with
+          [
+              _Other1=int,
+              _Other2=int
+          ]
+  e:\_enti\redes\udp\taller6_server\src\match.h(35): note: see reference to function template instantiation 'std::pair<float,float>::pair<int,int,void,0>(_Other1 &&,_Other2 &&) noexcept' being compiled
+          with
+          [
+              _Other1=int,
+              _Other2=int
+          ]
+c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.11.25503\include\utility(139): warning C4244: 'initializing': conversion from 'const float' to 'short', possible loss of data
+  e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(630): note: see reference to function template instantiation 'std::pair<short,short>::pair<float,float,void,0>(const std::pair<float,float> &)' being compiled
+  e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(630): note: see reference to function template instantiation 'std::pair<short,short>::pair<float,float,void,0>(const std::pair<float,float> &)' being compiled
+  Generating Code...
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(532): warning C4715: 'GetFreeId': not all control paths return a value
+e:\_enti\redes\udp\taller6_server\src\main_t6server.cpp(523): warning C4715: 'GetFreePort': not all control paths return a value
+  Taller6_Server.vcxproj -> E:\_ENTI\Redes\UDP\x64\Debug\Taller6_Server.exe
+  Taller6_Server.vcxproj -> E:\_ENTI\Redes\UDP\x64\Debug\Taller6_Server.pdb (Partial PDB)

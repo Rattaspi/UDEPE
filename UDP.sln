@@ -1,13 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2010
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Taller6_Client", "Taller6_Client\Taller6_Client.vcxproj", "{1135A1A0-083B-4711-B0B5-F364C22DBAEE}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Taller6_Server", "Taller6_Server\Taller6_Server.vcxproj", "{2043CF82-B096-49AF-BCA6-CD7CCB877993}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GameLib", "GameLib\GameLib.vcxproj", "{4D39486F-0627-4621-B0CF-1F830B0A69CC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DB_Test", "DB_Test\DB_Test.vcxproj", "{94FCC0A6-E068-4BC6-ABF0-F2A336D3F9BC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +43,14 @@ Global
 		{4D39486F-0627-4621-B0CF-1F830B0A69CC}.Release|x64.Build.0 = Release|x64
 		{4D39486F-0627-4621-B0CF-1F830B0A69CC}.Release|x86.ActiveCfg = Release|Win32
 		{4D39486F-0627-4621-B0CF-1F830B0A69CC}.Release|x86.Build.0 = Release|Win32
+		{94FCC0A6-E068-4BC6-ABF0-F2A336D3F9BC}.Debug|x64.ActiveCfg = Debug|x64
+		{94FCC0A6-E068-4BC6-ABF0-F2A336D3F9BC}.Debug|x64.Build.0 = Debug|x64
+		{94FCC0A6-E068-4BC6-ABF0-F2A336D3F9BC}.Debug|x86.ActiveCfg = Debug|Win32
+		{94FCC0A6-E068-4BC6-ABF0-F2A336D3F9BC}.Debug|x86.Build.0 = Debug|Win32
+		{94FCC0A6-E068-4BC6-ABF0-F2A336D3F9BC}.Release|x64.ActiveCfg = Release|x64
+		{94FCC0A6-E068-4BC6-ABF0-F2A336D3F9BC}.Release|x64.Build.0 = Release|x64
+		{94FCC0A6-E068-4BC6-ABF0-F2A336D3F9BC}.Release|x86.ActiveCfg = Release|Win32
+		{94FCC0A6-E068-4BC6-ABF0-F2A336D3F9BC}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

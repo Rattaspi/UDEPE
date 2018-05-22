@@ -18,7 +18,7 @@ const int subdividedSteps = 9;
 const int playerRadius = 20;
 const int ballRadius = 13;
 const int shootStrength = 200;
-const int numPlayers = 4;
+const int numPlayers = 2;
 const std::pair<short, short> leftGoalTop;
 const std::pair<short, short> leftGoalBot;
 const std::pair<short, short> rightGoalTop;

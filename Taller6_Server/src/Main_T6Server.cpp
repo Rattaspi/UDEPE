@@ -406,8 +406,6 @@ int main() {
 				matchThreads.push_back(std::thread(&MatchThread, aMatches[i]));
 				aMatches[i]->startFlag = true;
 
-				std::cout << "Empieza la partida\n";
-
 				for (int j = 0; j < aMatches[i]->aClients.size(); j++) {
 
 					OutputMemoryBitStream ombs;
@@ -422,12 +420,12 @@ int main() {
 					int aClientSizeMinus = aMatches[i]->aClients.size();
 
 
-					aClientSizeMinus--;
+					aClientSizeMinus;
 					ombs.Write(aClientSizeMinus, playerSizeBits);
 
 					for (int k = 0; k < aMatches[i]->aClients.size(); k++) {
 						ombs.Write(aMatches[i]->aClients[k]->GetMatchID(), playerSizeBits);
-						std::cout << "Adding player with id " << aMatches[i]->aClients[k]->GetMatchID() << std::endl;
+						//std::cout << "Adding player with id " << aMatches[i]->aClients[k]->GetMatchID() <<"and coords 0,0"<< std::endl;
 						ombs.Write((short)0, coordsbits);
 						ombs.Write((short)0, coordsbits);
 
@@ -436,6 +434,8 @@ int main() {
 						//ombs.Write(aMatches[i]->aClients[k]->GetPosition().second, coordsbits);
 					}
 
+
+					std::cout << "Creado un Welcome con informacion de " << aMatches[i]->aClients.size() << "\n";
 
 
 					//std::cout << "WelcomeAdded\n";
@@ -981,12 +981,12 @@ static void AddPlayer(ServerClient* client, Match* match) {
 		//ombs.Write(PacketType::WELCOME, commandBits);
 
 		if (!exists) {
-			match->clientID = match->GetAvailableId(match->aClients, numPlayers);
+			match->matchId = match->GetAvailableId(match->aClients, numPlayers);
 			match->aClients.push_back(client);
-			coords = match->initialPositions[match->clientID];
+			coords = match->initialPositions[match->matchId];
 			//ombs.Write(match->clientID, playerSizeBits);
-			repeatingId = match->clientID;
-			match->clientID++;
+			repeatingId = match->matchId;
+			match->matchId++;
 		}
 		else {
 			//ombs.Write(repeatingId, playerSizeBits);

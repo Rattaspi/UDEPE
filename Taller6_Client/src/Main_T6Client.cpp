@@ -60,6 +60,7 @@ class MatchDetailedInfo :public MatchInfo{
 };
 
 int main() {
+	bool welcomed = false;
 	bgTex.loadFromFile("bg.jpg");
 	bgSprite.setTexture(bgTex);
 	font.loadFromFile("arial_narrow_7.ttf");
@@ -1056,8 +1057,63 @@ int main() {
 							}
 
 							break;
-						}case PacketType::WELCOME: {
-							programState = ProgramState::MATCH;
+						}
+						case PacketType::WELCOME: {
+							if (!welcomed) {
+								std::cout << "RECIBIDO WELCOME EN SALA\n";
+
+								programState = ProgramState::MATCH;
+								welcomed = true;
+								serverMessageClock.restart();
+								serverMessage = "WELCOME! \nSCORE " + std::to_string(victoryScore) + " GOALS TO WIN";
+								int aCriticalId = 0;
+								int playerSize=0;
+								imbs.Read(&aCriticalId, criticalBits);
+								imbs.Read(&myId, playerSizeBits);
+
+								acks.push_back(aCriticalId);
+
+
+								imbs.Read(&playerSize, playerSizeBits);
+								//playerSize++;
+
+								//std::cout << "aCriticalId = " << aCriticalId << std::endl;
+								std::cout << "playerSize recibido = " << playerSize << std::endl;
+
+
+								for (int i = 0; i < playerSize; i++) {
+									Client* aClient = new Client();
+									int anotherId = 0;
+									//aClient->matchId = 0;
+									aClient->position.first = aClient->position.second = 0;
+
+									imbs.Read(&anotherId, playerSizeBits);
+
+									aClient->matchId = anotherId;
+
+									imbs.Read(&aClient->position.first, coordsbits);
+									imbs.Read(&aClient->position.second, coordsbits);
+
+									if (aClient->matchId != myId&&myId >= 0) {
+										std::cout << "Recibiendo cliente preexistente con id " << aClient->matchId << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
+										if (aClient->matchId < 2) {
+											aClients.push_back(aClient);
+											sf::CircleShape playerRender(playerRadius);
+											playerRenders.push_back(playerRender);
+										}
+
+									}
+									else {
+										myCoordenates = aClient->position;
+										auxPosition = myCoordenates;
+										originalCoordenates = myCoordenates;
+										delete aClient;
+									}
+								}
+
+								connected = true;
+								std::cout << "MY ID IS " << myId << std::endl;
+							}
 							break;
 						}
 						default:
@@ -1168,51 +1224,55 @@ int main() {
 					int anIndex = 0;
 					switch (command) {
 					case PacketType::WELCOME: {
+						if (!welcomed) {
+							std::cout << "RECIBIDO WELCOME EN PARTIDA\n";
 
-						serverMessageClock.restart();
-						serverMessage = "WELCOME! \nSCORE " + std::to_string(victoryScore) + " GOALS TO WIN";
-						imbs.Read(&aCriticalId, criticalBits);
-						imbs.Read(&myId, playerSizeBits);
+							welcomed = true;
+							serverMessageClock.restart();
+							serverMessage = "WELCOME! \nSCORE " + std::to_string(victoryScore) + " GOALS TO WIN";
+							imbs.Read(&aCriticalId, criticalBits);
+							imbs.Read(&myId, playerSizeBits);
 
-						acks.push_back(aCriticalId);
-
-
-						imbs.Read(&playerSize, playerSizeBits);
-						playerSize++;
-
-						std::cout << "aCriticalId = " << aCriticalId << std::endl;
+							acks.push_back(aCriticalId);
 
 
-						for (int i = 0; i < playerSize; i++) {
-							Client* aClient = new Client();
-							int anotherId=0;
-							//aClient->matchId = 0;
-							aClient->position.first = aClient->position.second = 0;
+							imbs.Read(&playerSize, playerSizeBits);
+							//playerSize++;
 
-							imbs.Read(&anotherId, playerSizeBits);
+							std::cout << "aCriticalId = " << aCriticalId << std::endl;
 
-							aClient->matchId = anotherId;
 
-							imbs.Read(&aClient->position.first, coordsbits);
-							imbs.Read(&aClient->position.second, coordsbits);
+							for (int i = 0; i < playerSize; i++) {
+								Client* aClient = new Client();
+								int anotherId = 0;
+								//aClient->matchId = 0;
+								aClient->position.first = aClient->position.second = 0;
 
-							if (aClient->matchId != myId&&myId >= 0) {
-								std::cout << "Recibiendo cliente preexistente con id " << aClient->matchId << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
-								aClients.push_back(aClient);
-								sf::CircleShape playerRender(playerRadius);
-								playerRenders.push_back(playerRender);
+								imbs.Read(&anotherId, playerSizeBits);
 
+								aClient->matchId = anotherId;
+
+								imbs.Read(&aClient->position.first, coordsbits);
+								imbs.Read(&aClient->position.second, coordsbits);
+
+								if (aClient->matchId != myId&&myId >= 0) {
+									std::cout << "Recibiendo cliente preexistente con id " << aClient->matchId << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
+									aClients.push_back(aClient);
+									sf::CircleShape playerRender(playerRadius);
+									playerRenders.push_back(playerRender);
+
+								}
+								else {
+									myCoordenates = aClient->position;
+									auxPosition = myCoordenates;
+									originalCoordenates = myCoordenates;
+									delete aClient;
+								}
 							}
-							else {
-								myCoordenates = aClient->position;
-								auxPosition = myCoordenates;
-								originalCoordenates = myCoordenates;
-								delete aClient;
-							}
+
+							connected = true;
+							std::cout << "MY ID IS " << myId << std::endl;
 						}
-
-						connected = true;
-						std::cout << "MY ID IS " << myId << std::endl;
 						break; 
 					}
 					case PacketType::PING:
@@ -1534,6 +1594,21 @@ int main() {
 
 					window.clear();
 					DrawMap(&mapLines, &window);
+
+						int indexToDelete = -1;
+						for (int i = 0; i < aClients.size(); i++) {
+							if (aClients[i]->matchId > 2) {
+								if (indexToDelete == -1) {
+									indexToDelete = i;
+								}
+
+							}
+						}
+
+						if (indexToDelete > -1) {
+							aClients.erase(aClients.begin() + indexToDelete);
+							playerRenders.erase(playerRenders.begin() + indexToDelete);
+						}
 
 					//sf::RectangleShape rectBlanco(sf::Vector2f(1, 600));
 					//rectBlanco.setFillColor(sf::Color::White);

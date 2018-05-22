@@ -23,6 +23,13 @@ public:
 		stmt = con->createStatement();
 		stmt->execute("USE  PracticaDB");
 	}
+	
+	~DBManager() {
+		driver = nullptr;
+		delete con;
+		delete stmt;
+		delete rs;
+	}
 
 	bool Register(std::string user, std::string pass) {
 		rs = stmt->executeQuery(("select count(*) from Accounts where username='" + user + "'").c_str());
@@ -30,7 +37,7 @@ public:
 		int i = rs->getInt(1);
 		delete rs;
 		if (i == 0) {
-			stmt->execute(("insert into Accounts(username,password) values (" + user + "," + pass + ")").c_str());
+			stmt->execute(("insert into Accounts(username,password) values ('" + user + "','" + pass + "')").c_str());
 			
 			return true;
 		}

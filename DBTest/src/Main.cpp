@@ -10,7 +10,7 @@ int main() {
 	//}
 	//delete dbm->rs;
 
-	dbm->Register("prueba1", "passwordPrueba");
+	//dbm->Register("prueba1", "passwordPrueba");
 
 	delete dbm;
 	system("pause");

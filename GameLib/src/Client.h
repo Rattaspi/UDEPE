@@ -68,24 +68,25 @@ public:
 	std::string userName;
 	std::pair<short, short> position;
 	std::queue<std::pair<short, short>>steps; //Esto solo lo usan clientes
-	int id;
+	int userId;
+	int matchId;
 	//unsigned int id;
 	Client() {
 		userName = "";
 		position.first = 0;
 		position.second = 0;
-		id = 0;
+		matchId = -1;
 	}
 
 	Client(int id) {
-		this->id = id;
+		this->matchId = id;
 		userName = "";
 		position.first = 0;
 		position.second = 0;
 	}
 
 	Client(int id, std::pair<short, short> position){
-		this->id = id;
+		this->matchId = id;
 		this->position = position;
 	}
 
@@ -114,24 +115,27 @@ private:
 	std::string ip;
 	std::vector<CriticalMessage> criticalVector; //POR ALGUNA RAZON NO PUEDO ACCEDER A ESTE VECTOR
 public:
+	//Match* inGame;
 	User* associatedUser;
 	std::vector<AccumMoveServer> acumulatedMoves;
 	sf::Clock moveClock;
 	sf::Clock shootClock;
 	int criticalId; //para llevar track del id de los mensajes criticos
 	sf::Clock pingCounter;
+	bool isReady;
 	ServerClient(std::string ip, unsigned short port, int id, std::pair<short, short> position) {
 		this->ip = ip;
 		this->port = port;
-		this->id = id;
+		this->matchId = id;
 		this->position = position;
 		pingCounter.restart();
 		userName = "Player" + id;
 		criticalId = 0;
+		isReady = false;
 	}
 
 	ServerClient() {
-		id = 0;
+		matchId = 0;
 		criticalId = 0;
 		userName = "";
 	}
@@ -140,7 +144,7 @@ public:
 		this->ip = ip;
 	}
 
-	void SetPort(short port) {
+	void SetPort(unsigned short port) {
 		this->port = port;
 	}
 
@@ -154,8 +158,12 @@ public:
 	std::string GetIP() {
 		return ip;
 	}
-	int GetID() {
-		return id;
+	int GetMatchID() {
+		return matchId;
+	}
+
+	int GetUserID() {
+		return userId;
 	}
 
 	std::pair<short, short> GetPosition() {
@@ -165,7 +173,7 @@ public:
 	void AddCriticalMessage(CriticalMessage* critical) {
 		criticalVector.push_back(*critical);
 		criticalId++;
-		std::cout << "Client with id " << id << " raised critialId to " << criticalId << std::endl;
+		std::cout << "Client with id " << matchId << " raised critialId to " << criticalId << std::endl;
 	}
 
 	void DebugCriticalPackets() {
@@ -184,7 +192,7 @@ public:
 		sf::Socket::Status status;
 
 		for (int i = 0; i < criticalVector.size(); i++) {
-			std::cout << "Criticals sent to player " << id << "\n";
+			std::cout << "Criticals sent to player " << matchId << "\n";
 			status = socket->send(criticalVector[i].message, criticalVector[i].messageSize, ip, port);
 
 			if (status == sf::Socket::Status::Error) {

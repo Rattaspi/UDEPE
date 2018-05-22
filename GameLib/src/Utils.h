@@ -3,8 +3,9 @@
 #include "OutputMemoryBitStream.h"
 #include "InputMemoryBitStream.h"
 
-enum PacketType {HELLO, WELCOME, NEWPLAYER, DISCONNECT, ACK, PING, ACKPING, ACKMOVE, SHOOT, GAMEOVER, GAMESTART, GOAL, NOTWELCOME, MOVE, MOVEBALL, JOINGAME, CREATEGAME, UPDATEGAMELIST, LOGIN, REGISTER, MSG};
+enum PacketType {HELLO, WELCOME, NEWPLAYER, DISCONNECT, ACK, PING, ACKPING, ACKMOVE, SHOOT, GAMEOVER, GAMESTART, GOAL, NOTWELCOME, MOVE, MOVEBALL, JOINGAME, CREATEGAME, UPDATEGAMELIST, LOGIN, REGISTER, MSG, READY};
 const int commandBits = 5;
+const int portBits = 16;
 const int matchBits = 4;
 const int maxBufferSize = 1300;
 const int playerSizeBits = 3;
@@ -57,7 +58,7 @@ static ServerClient* GetServerClientWithIpPort(unsigned short port, std::string 
 
 static Client* GetClientWithId(int id, std::vector<Client*>aClients) {
 	for (int i = 0; i < aClients.size(); i++) {
-		if (aClients[i]->id == id) {
+		if (aClients[i]->matchId == id) {
 			return aClients[i];
 		}
 	}
@@ -85,7 +86,7 @@ static Client* GetClientWithId(int id, std::vector<Client*>aClients) {
 static int GetIndexServerClientWithId(int id, std::vector<ServerClient*>*aClients) {
 
 	for (int i = 0; i < aClients->size(); i++) {
-		if (aClients->at(i)->id == id) {
+		if (aClients->at(i)->matchId == id) {
 			return i;
 		}
 	}
@@ -95,7 +96,7 @@ static int GetIndexServerClientWithId(int id, std::vector<ServerClient*>*aClient
 static int GetIndexClientWithId(int id, std::vector<Client*>*aClients) {
 
 	for (int i = 0; i < aClients->size(); i++) {
-		if (aClients->at(i)->id == id) {
+		if (aClients->at(i)->matchId == id) {
 			return i;
 		}
 	}

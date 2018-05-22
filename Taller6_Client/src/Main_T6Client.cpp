@@ -23,9 +23,9 @@ void InterpolateBallMovement(std::queue<std::pair<short, short>>*, std::pair<sho
 
 void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::string* serverMessage, sf::RenderWindow* window, sf::Clock*serverMessageClock);
 
-void LogIn(sf::UdpSocket* socket, std::string user, std::string password, sf::IpAddress, short port);
+void LogIn(sf::UdpSocket* socket, std::string user, std::string password, sf::IpAddress, unsigned short port);
 
-void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword, sf::IpAddress ip, short port);
+void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword, sf::IpAddress ip, unsigned short port);
 
 void ResetValues(int* selectedOption);
 
@@ -69,7 +69,8 @@ int main() {
 	std::cout << "CLIENTE INICIADO" << std::endl;
 	std::string serverIp = "localhost";
 	int serverPort = 50000;
-	int matchPort=0;
+	unsigned short matchPort=0;
+
 	sf::Socket::Status status;
 	sf::UdpSocket* socket = new sf::UdpSocket();
 	std::string command;
@@ -132,6 +133,7 @@ int main() {
 
 	int selectedOption=0;
 	bool logInAnswer = true;
+	bool joinAnswer = true;
 	while (!end){
 			switch (programState) {
 			case SERVERCHECK: {
@@ -592,14 +594,30 @@ int main() {
 								imbs.Read(&someClientSize, playerSizeBits);
 								imbs.Read(&anId, matchBits);
 								imbs.ReadString(&someName);
-								
-								MatchInfo matchInfo(anId,someName,4,someClientSize);
+
+								MatchInfo matchInfo(anId, someName, 4, someClientSize);
+
+								std::cout << "Recibida sala con nombre" << someName << std::endl;
 
 								matchesInfo.push_back(matchInfo);
 
 							}
 							break;
 
+						}
+						case PacketType::JOINGAME:{
+							bool aBool = false;
+							imbs.Read(&aBool, boolBit);
+
+							if (aBool) {
+								unsigned short aMatchPort = 0;
+								imbs.Read(&aMatchPort, portBits);
+								matchPort = aMatchPort;
+								std::cout << "matchPort = " << matchPort;
+								programState = MATCH_ROOM;
+							}
+
+							break;
 						}
 						case PacketType::PING: {
 							OutputMemoryBitStream ombs;
@@ -650,7 +668,7 @@ int main() {
 
 
 
-					sf::RectangleShape rect3(sf::Vector2f(400.0f, 100.0f));
+					sf::RectangleShape rect3(sf::Vector2f(300.0f, 100.0f));
 					rect3.setSize(sf::Vector2f(400, 100.0f));
 					rect3.setPosition(rect1.getPosition().x + rect1.getSize().x,rect1.getPosition().y);
 					rect3.setFillColor(sf::Color::Red);
@@ -678,7 +696,12 @@ int main() {
 									if (rectangleShapes.size() != i) {
 										if (x >= rectangleShapes[i].getPosition().x&&x <= rectangleShapes[i].getPosition().x + rectangleShapes[i].getSize().x) {
 											if (y >= rectangleShapes[i].getPosition().y&&y <= rectangleShapes[i].getPosition().y + rectangleShapes[i].getSize().y) {
-												selectedOption = i;
+												if (selectedOption == i&&joinAnswer) {
+													joinAnswer = false;
+												}
+												else {
+													selectedOption = i;
+												}
 											}
 										}
 									}
@@ -688,7 +711,7 @@ int main() {
 									if (x >= rect1.getPosition().x && x <= rect1.getPosition().x + rect1.getSize().x) {
 										//selectedOption = 0;
 										myMatchId = matchesInfo[selectedOption].matchId;
-										programState = MATCH_ROOM;
+										//programState = MATCH_ROOM;
 										aMsjs.clear();
 										ResetValues(&selectedOption);
 
@@ -733,6 +756,18 @@ int main() {
 							}
 							break;
 						}
+					}
+
+					if (!joinAnswer&&logInClock.getElapsedTime().asSeconds()>0.3f) {
+						logInClock.restart();
+						OutputMemoryBitStream ombs;
+						ombs.Write(PacketType::JOINGAME, commandBits);
+						ombs.Write(matchesInfo[selectedOption].matchId, matchBits);
+						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+						if (status == sf::Socket::Error) {
+							std::cout << "Error mandando petición de unión a partida\n";
+						}
+
 					}
 
 					window.draw(rect3);
@@ -788,6 +823,20 @@ int main() {
 								std::cout << "Error enviando ACKPING\n";
 							}
 
+							break;
+						}
+						case PacketType::CREATEGAME:{
+							bool anAnswer = false;
+
+							imbs.Read(&anAnswer, boolBit);
+							joinAnswer = true;
+
+							if (anAnswer) {
+								programState = ProgramState::MAIN_MENU;
+								ResetValues(&selectedOption);
+							}else{
+
+							}
 							break;
 						}
 						default:
@@ -934,7 +983,8 @@ int main() {
 										 ResetValues(&selectedOption);
 									}
 									else if (x >= createRect.getPosition().x&&x <= createRect.getPosition().x + createRect.getSize().x) {
-										programState = MATCH_ROOM;
+										//programState = MATCH_ROOM;
+										joinAnswer = false;
 										ResetValues(&selectedOption);
 									}
 								}
@@ -943,6 +993,24 @@ int main() {
 							}
 							break;
 						}
+					}
+
+					if (!joinAnswer&&shootCounter.getElapsedTime().asSeconds()>0.5f) {
+						shootCounter.restart();
+						OutputMemoryBitStream ombs;
+						ombs.Write(PacketType::CREATEGAME, commandBits);
+						ombs.WriteString(roomName);
+						ombs.WriteString(roomPass);
+						std::string::size_type sz;   // alias of size_t
+						int goals = std::stoi(goalsNumber, &sz);
+						ombs.Write(goals, commandBits);
+
+						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+						if (status == sf::Socket::Error) {
+							std::cout << "Error enviando CreateGame\n";
+						}
+
 					}
 
 					window.draw(roomNameRect);
@@ -988,6 +1056,9 @@ int main() {
 							}
 
 							break;
+						}case PacketType::WELCOME: {
+							programState = ProgramState::MATCH;
+							break;
 						}
 						default:
 							break;
@@ -1032,6 +1103,16 @@ int main() {
 								if (y >= rect1.getPosition().y && y <= rect1.getPosition().y + rect1.getSize().y) {
 									if (x >= rect1.getPosition().x && x <= rect1.getPosition().x + rect1.getSize().x) {
 										//PULSADO READY
+										OutputMemoryBitStream ombs;
+										ombs.Write(PacketType::READY, commandBits);
+										status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
+
+										std::cout << "ENVIANDO READY A PORT " << matchPort<<"\n";
+
+										if (status == sf::Socket::Error) {
+											std::cout << "Error enviando ready\n";
+										}
+
 
 									}
 								}
@@ -1053,19 +1134,19 @@ int main() {
 			}
 			case MATCH: {
 				//CONTROL DE REENVIOS POR HASTA QUE EL SERVIDOR NOS CONFIRMA LA CONEXION
-				if (clock.getElapsedTime().asMilliseconds() > 500 && !connected) {
-					OutputMemoryBitStream ombs;
-					ombs.Write(PacketType::HELLO, commandBits);
-					status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+				//if (clock.getElapsedTime().asMilliseconds() > 500 && !connected) {
+				//	OutputMemoryBitStream ombs;
+				//	ombs.Write(PacketType::HELLO, commandBits);
+				//	status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
 
-					if (status != sf::Socket::Done) {
-						std::cout << "El mensaje no se ha podido enviar correctamente" << std::endl;
-					}
-					else if (status == sf::Socket::Done) {
-						std::cout << "Intentando conectar al servidor..." << std::endl;
-					}
-					clock.restart();
-				}
+				//	if (status != sf::Socket::Done) {
+				//		std::cout << "El mensaje no se ha podido enviar correctamente" << std::endl;
+				//	}
+				//	else if (status == sf::Socket::Done) {
+				//		std::cout << "Intentando conectar al servidor..." << std::endl;
+				//	}
+				//	clock.restart();
+				//}
 
 				if (!incomingInfo.empty()) {
 					Event inc;
@@ -1086,24 +1167,37 @@ int main() {
 					//Client* aClient = nullptr;
 					int anIndex = 0;
 					switch (command) {
-					case PacketType::WELCOME:
+					case PacketType::WELCOME: {
 
 						serverMessageClock.restart();
 						serverMessage = "WELCOME! \nSCORE " + std::to_string(victoryScore) + " GOALS TO WIN";
-
+						imbs.Read(&aCriticalId, criticalBits);
 						imbs.Read(&myId, playerSizeBits);
+
+						acks.push_back(aCriticalId);
+
+
 						imbs.Read(&playerSize, playerSizeBits);
 						playerSize++;
+
+						std::cout << "aCriticalId = " << aCriticalId << std::endl;
+
+
 						for (int i = 0; i < playerSize; i++) {
 							Client* aClient = new Client();
+							int anotherId=0;
+							//aClient->matchId = 0;
 							aClient->position.first = aClient->position.second = 0;
 
-							imbs.Read(&aClient->id, playerSizeBits);
+							imbs.Read(&anotherId, playerSizeBits);
+
+							aClient->matchId = anotherId;
+
 							imbs.Read(&aClient->position.first, coordsbits);
 							imbs.Read(&aClient->position.second, coordsbits);
 
-							if (aClient->id != myId&&myId > 0) {
-								std::cout << "Recibiendo cliente preexistente con id " << aClient->id << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
+							if (aClient->matchId != myId&&myId >= 0) {
+								std::cout << "Recibiendo cliente preexistente con id " << aClient->matchId << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
 								aClients.push_back(aClient);
 								sf::CircleShape playerRender(playerRadius);
 								playerRenders.push_back(playerRender);
@@ -1119,11 +1213,11 @@ int main() {
 
 						connected = true;
 						std::cout << "MY ID IS " << myId << std::endl;
-						break;
-
+						break; 
+					}
 					case PacketType::PING:
 						ombs.Write(PacketType::ACKPING, commandBits);
-						socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+						socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
 						clockForTheServer.restart();
 						break;
 
@@ -1133,7 +1227,7 @@ int main() {
 							imbs.Read(&aCriticalId, criticalBits);
 							std::cout << "PUSHING ACK WITH ID" << aCriticalId << " NEW PLAYER " << std::endl;
 							imbs.Read(&aPlayerId, playerSizeBits);
-							newPlayer->id = aPlayerId;
+							newPlayer->matchId = aPlayerId;
 							imbs.Read(&newPlayer->position.first, coordsbits);
 							imbs.Read(&newPlayer->position.second, coordsbits);
 							acks.push_back(aCriticalId);
@@ -1142,9 +1236,9 @@ int main() {
 
 							playerRenders.push_back(playerRender);
 
-							if (GetClientWithId(newPlayer->id, aClients) == nullptr) {
+							if (GetClientWithId(newPlayer->matchId, aClients) == nullptr) {
 								aClients.push_back(newPlayer);
-								std::cout << "Adding player with id " << newPlayer->id << std::endl;
+								std::cout << "Adding player with id " << newPlayer->matchId << std::endl;
 							}
 							else {
 								std::cout << "Already existing player received\n";
@@ -1311,7 +1405,7 @@ int main() {
 						ombs.Write(PacketType::ACK, commandBits);
 						ombs.Write(acks[i], criticalBits);
 						std::cout << "Sending ack " << acks[i] << std::endl;
-						socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+						socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
 					}
 					acks.clear();
 				}
@@ -1338,7 +1432,7 @@ int main() {
 									ombs.Write(myCoordenates.second, coordsbits);
 									ombs.Write(localBallCoords.first, coordsbits);
 									ombs.Write(localBallCoords.second, coordsbits);
-									status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+									status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
 									if (status == sf::Socket::Error) {
 										std::cout << "Error enviando Shoot\n";
 									}
@@ -1480,7 +1574,7 @@ int main() {
 
 							int lossRate = LOSSRATE
 								if ((int)(rand() % 100) > lossRate) {
-									status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+									status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
 								}
 								else {
 									std::cout << "Move perdido a posta\n";
@@ -1506,7 +1600,7 @@ int main() {
 					//DRAW DE PERSONAJES (dependiendo de quien sea se pintará de un color o otro)
 					for (int i = 0; i < aClients.size(); i++) {
 						if (myId == 0 || myId == 1) {
-							if (aClients[i]->id == 2 || aClients[i]->id == 3) {
+							if (aClients[i]->matchId == 2 || aClients[i]->matchId == 3) {
 								playerRenders[i].setFillColor(sf::Color::Red);
 							}
 							else {
@@ -1514,7 +1608,7 @@ int main() {
 							}
 						}
 						else {
-							if (aClients[i]->id == 0 || aClients[i]->id == 1) {
+							if (aClients[i]->matchId == 0 || aClients[i]->matchId == 1) {
 								playerRenders[i].setFillColor(sf::Color::Red);
 							}
 							else {
@@ -1614,7 +1708,7 @@ bool CheckValidMoveId(std::vector<AccumMove>*nonAckMoves, int aCriticalId, std::
 
 bool ClientExists(std::vector<Client*>aClients,int id) {
 	for (int i = 0; i < aClients.size(); i++) {
-		if (aClients[i]->id == id){
+		if (aClients[i]->matchId == id){
 			return true;
 		}
 	}
@@ -1740,7 +1834,7 @@ void InterpolateBallMovement(std::queue<std::pair<short, short>>* ballSteps, std
 	}
 }
 
-void LogIn(sf::UdpSocket* socket, std::string user, std::string password,sf::IpAddress ip, short port) {
+void LogIn(sf::UdpSocket* socket, std::string user, std::string password,sf::IpAddress ip, unsigned short port) {
 	//TODO
 	std::cout << "Trying to Log In with UserName\n";// " + user + " and password " + password + "\n";
 
@@ -1759,7 +1853,7 @@ void LogIn(sf::UdpSocket* socket, std::string user, std::string password,sf::IpA
 	}
 }
 
-void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword,sf::IpAddress ip, short port) {
+void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword,sf::IpAddress ip, unsigned short port) {
 	sf::Socket::Status status;
 	if (confirmedPassword == password) {
 
@@ -1783,3 +1877,4 @@ void Register(sf::UdpSocket* socket, std::string user, std::string password, std
 void ResetValues(int* selectedOption) {
 	*selectedOption = 0;
 }
+

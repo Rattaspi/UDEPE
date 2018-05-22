@@ -1,5 +1,4 @@
 #pragma once
-#include "Client.h"
 #include <queue>
 #include <thread>
 #include "Event.h""
@@ -8,7 +7,10 @@
 #include "Utils.h"
 
 
-
+class MatchRoom {
+public:
+	std::vector<ServerClient*>aClients;
+};
 
 class Match {
 
@@ -20,10 +22,11 @@ public:
 	std::vector<ServerClient*> aClients;
 	sf::Socket::Status status;
 	sf::UdpSocket* socket = new sf::UdpSocket();
-
+	unsigned short matchPort;
 	bool end = false;
 	bool sentEnd = false;
 	bool gameHadStarted = false;
+	bool startFlag = false;
 	std::queue<Event*> incomingInfo; //cola de paquetes entrantes
 	std::vector<std::vector<AccumMoveServer>> acumulatedMoves;
 	std::pair<short, short>initialPositions[4] = { { 200,200 },{ 200,400 },{ 800,200 },{ 800,400 } }; //formación inicial de los jugadores
@@ -37,11 +40,15 @@ public:
 	bool gameOver = false;
 	int leftScore = 0;
 	int rightScore = 0;
-	void Run();
-	void SetUp(short);
+	//void Run();
+	//void Run(Match* match);
+
+	void SetUp(unsigned short);
+	void ResetCounters();
 	void DisconnectPlayer(std::vector<ServerClient*>* aClients, ServerClient* aClient);
 	void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std::pair<short, short> ballPos);
 	void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta, int*, int*, std::vector<ServerClient*>*, sf::UdpSocket*, bool*);
 	int GetAvailableId(std::vector<ServerClient*>aClients, int num);
 	bool CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket);
+	bool Match::ContainsClient(ServerClient* aClient);
 };

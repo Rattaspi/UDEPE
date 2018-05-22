@@ -1717,7 +1717,12 @@ int main() {
 
 					if (gameOver) {
 						if (clockGameOver.getElapsedTime().asSeconds() > 5) {
-							end = true;
+							//end = true;
+							joinAnswer = true;
+							programState = MAIN_MENU;
+							myId = 0;
+							welcomed = false;
+							ResetValues(&selectedOption);
 						}
 						if ((myId == 0 || myId == 1) && !winner) {
 							serverMessage = "YOU WIN!";

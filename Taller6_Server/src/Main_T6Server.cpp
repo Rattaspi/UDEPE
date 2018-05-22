@@ -486,6 +486,45 @@ int main() {
 			std::cout << "Desconectando un jugador\n";
 			idsToDisconnect.pop();
 		}
+		int matchToDelete = -1;
+		for (int i = 0; i < aMatches.size(); i++) {
+			if (matchToDelete == -1) {
+				if (aMatches[i]->end) {
+
+					std::cout << "Tamaño de receptionThreads "<<receptionThreads.size()<<std::endl;
+
+					//receptionThreads[i].join();
+					//matchThreads[i].join();
+					//pingThreads[i].join();
+
+					matchToDelete = i;
+
+
+
+				}
+			}
+		}
+
+		//std::cout << "Tamaño de receptionThreads " << receptionThreads.size() << std::endl;
+
+		if (matchToDelete > -1) {
+			std::cout << "Tamaño de receptionThreads " << receptionThreads.size() << std::endl;
+
+			if (receptionThreads[matchToDelete].joinable()) {
+				receptionThreads[matchToDelete].join();
+			}			
+			if (matchThreads[matchToDelete].joinable()) {
+				matchThreads[matchToDelete].join();
+			}
+			if (pingThreads[matchToDelete].joinable()) {
+				pingThreads[matchToDelete].join();
+			}
+			receptionThreads.erase(receptionThreads.begin() + matchToDelete);
+			matchThreads.erase(matchThreads.begin() + matchToDelete);
+			pingThreads.erase(pingThreads.begin() + matchToDelete);
+			aMatches.erase(aMatches.begin()+matchToDelete);
+		}
+
 
 	}
 

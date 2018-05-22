@@ -113,7 +113,7 @@ void Match::UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*
 
 bool Match::CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket) {
 	//Si gana left se pasa un 0, si gana right se pasa un 1
-	if (leftScore == victoryScore) {
+	if (leftScore == 1) {
 		for (int i = 0; i < aClients->size(); i++) {
 			OutputMemoryBitStream ombs;
 			ombs.Write(PacketType::GAMEOVER, commandBits);
@@ -123,7 +123,7 @@ bool Match::CheckGameOver(int leftScore, int rightScore, std::vector<ServerClien
 		}
 		return true;
 	}
-	else if (rightScore == victoryScore) {
+	else if (rightScore == 1) {
 		for (int i = 0; i < aClients->size(); i++) {
 			OutputMemoryBitStream ombs;
 			ombs.Write(PacketType::GAMEOVER, commandBits);

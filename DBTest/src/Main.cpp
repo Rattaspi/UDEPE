@@ -10,8 +10,7 @@ int main() {
 	//}
 	//delete dbm->rs;
 
-	std::string user = "rattaspi";
-	dbm->Register(user, "asdf");
+	dbm->Register("prueba1", "passwordPrueba");
 
 	delete dbm;
 	system("pause");

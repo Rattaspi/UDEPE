@@ -25,16 +25,18 @@ public:
 	}
 
 	bool Register(std::string user, std::string pass) {
-		rs = stmt->executeQuery("select count(*) from Accounts where username='" + user.c_str + "'");
+		rs = stmt->executeQuery(("select count(*) from Accounts where username='" + user + "'").c_str());
 		rs->next();
 		int i = rs->getInt(1);
+		delete rs;
 		if (i == 0) {
-			std::cout << "USUARIO NO REPETIDO" << std::endl;
+			stmt->execute(("insert into Accounts(username,password) values (" + user + "," + pass + ")").c_str());
+			
+			return true;
 		}
 		else {
 			std::cout << "USUARIO REPETIDO" << std::endl;
 		}
-
 		return false;
 	}
 };

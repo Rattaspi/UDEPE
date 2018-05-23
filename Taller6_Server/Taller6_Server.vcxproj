@@ -129,6 +129,7 @@
     <ClCompile Include="src\Match.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\DBManager.h" />
     <ClInclude Include="src\Match.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

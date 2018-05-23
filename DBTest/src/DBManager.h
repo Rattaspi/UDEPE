@@ -95,4 +95,11 @@ public:
 		delete rs;
 		return idSession;
 	}
+
+	/*
+	 * Finaliza la sesion de juego actualizando las partidas que se han jugado y la hora de desconexión
+	 */
+	void EndSession( int idSession, int games) {
+		stmt->execute(("update Sessions set games=" + std::to_string(games) + ", end=CURRENT_TIMESTAMP where idSession=" + std::to_string(idSession)).c_str());
+	}
 };

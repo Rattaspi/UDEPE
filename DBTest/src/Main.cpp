@@ -11,6 +11,10 @@ int main() {
 	//delete dbm->rs;
 
 	//dbm->Register("prueba1", "passwordPrueba");
+	//dbm->Login("Rattaspi", "123");
+	//std::cout << dbm->GetUserID("devildrake") << std::endl;
+	//dbm->StartSession(1);
+	//dbm->EndSession(1, 10);
 
 	delete dbm;
 	system("pause");

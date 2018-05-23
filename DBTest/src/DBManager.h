@@ -28,7 +28,7 @@ public:
 		driver = nullptr;
 		delete con;
 		delete stmt;
-		delete rs;
+		//delete rs;
 	}
 
 	bool Register(std::string user, std::string pass) {
@@ -45,5 +45,19 @@ public:
 			std::cout << "USUARIO REPETIDO" << std::endl;
 		}
 		return false;
+	}
+
+	bool Login(std::string user, std::string pass) {
+		rs = stmt->executeQuery(("select count(*) from Accounts where username='" + user +"' and password='"+pass+"'").c_str());
+		rs->next();
+		int i = rs->getInt(1);
+		delete rs;
+		if (i == 0) {
+			std::cout << "Usuario o contraseña incorrectos" << std::endl;
+			return false;
+		}
+
+		std::cout << "Login correcto!"<<std::endl;
+		return true;
 	}
 };

@@ -80,4 +80,19 @@ public:
 		delete rs;
 		return id;
 	}
+
+	/*
+	 * Este metodo crea una nueva sesion de un usuario que tu le pases.
+	 * Devuelve el id de esta sesion nueva que se ha creado para accederla facilmente más adelante.
+	 */
+	int StartSession(int idPlayer) {
+		stmt->execute(("insert into Sessions(idAcc) values (" + std::to_string(idPlayer) + ")").c_str());
+
+		rs = stmt->executeQuery("select max(idSession) from Sessions");
+
+		rs->next();
+		int idSession = rs->getInt(1);
+		delete rs;
+		return idSession;
+	}
 };

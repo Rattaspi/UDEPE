@@ -31,6 +31,11 @@ public:
 		//delete rs;
 	}
 
+	/*
+	 * Crea una nueva entrada en la base de datos si el usuario no está repetido.
+	 * 
+	 * Devuelve true si el registro se ha realizado con exito y false si el usuario está repetido.
+	 */
 	bool Register(std::string user, std::string pass) {
 		rs = stmt->executeQuery(("select count(*) from Accounts where username='" + user + "'").c_str());
 		rs->next();
@@ -47,6 +52,10 @@ public:
 		return false;
 	}
 
+	/*
+	 * Devuelve true si la informacion de usuario y contraseña es correcta, de lo contrario
+	 * devuelve false.
+	 */
 	bool Login(std::string user, std::string pass) {
 		rs = stmt->executeQuery(("select count(*) from Accounts where username='" + user +"' and password='"+pass+"'").c_str());
 		rs->next();
@@ -59,5 +68,16 @@ public:
 
 		std::cout << "Login correcto!"<<std::endl;
 		return true;
+	}
+
+	/*
+	 * Dado un nombre de usuario te devuelve el id que tiene en la base de datos
+	 */
+	int GetUserID(std::string user) {
+		rs = stmt->executeQuery(("select * from Accounts where username='" + user + "'").c_str());
+		rs->next();
+		int id = rs->getInt(1);
+		delete rs;
+		return id;
 	}
 };

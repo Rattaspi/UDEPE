@@ -1,4 +1,5 @@
 #include "Match.h"
+#include "DBManager.h"
 //#define MAX_MATCHES 10
 
 void PingThread(Match* match);
@@ -16,6 +17,7 @@ void MatchRoomThread(Match* match);
 int main() {
 	bool once = false;
 	std::vector<User> users;
+	DBManager* dbm = new DBManager();
 
 	User devildra("devildrake","ab123");
 	User rattaspi("rattaspi", "ab123");
@@ -188,6 +190,8 @@ int main() {
 				break;
 			}
 			case PacketType::REGISTER: {
+				//TODO implementar el registro contra la base de datos 
+				//bool done = dbm->Register(user, pass);
 				std::string aUserName="";
 				std::string aPassWord="";
 				imbs.ReadString(&aUserName);
@@ -227,56 +231,62 @@ int main() {
 				break;
 			}			   
 			case PacketType::LOGIN: {
+				//TODO comprovar el usuario y contraseña contra la base de datos
+				//bool ok = dbm->Login(user, pass);
 				ombs.Write(PacketType::LOGIN, commandBits);
 				std::string userName = "";
 				std::string passWord = "";
 
 				imbs.ReadString(&userName);
 				imbs.ReadString(&passWord);
-				int index = -1;
+				
+				//int index = -1;
 
 
-				for (int i = 0; i < users.size(); i++) {
-					//std::cout << "Recibido usuario " << userName << ", comparando con " << users[i].userName << std::endl;
+				//for (int i = 0; i < users.size(); i++) {
+				//	//std::cout << "Recibido usuario " << userName << ", comparando con " << users[i].userName << std::endl;
 
-					if (users[i].userName == userName) {
-						//std::cout << "Este usuario existe\n";
+				//	if (users[i].userName == userName) {
+				//		//std::cout << "Este usuario existe\n";
 
-						index = i;
-					}
-				}
+				//		index = i;
+				//	}
+				//}
 
-				if (index >= 0) {
-					if (users[index].passWord == passWord) {
-						//users[index].connected = true;
-						ServerClient* aClient = new ServerClient(remoteIP.toString(), remotePort, 0, std::pair<short, short>(0, 0));
-						aClient->SetUserName(users[index].userName);
-
-
-						if (GetServerClientWithIpPort(remotePort, remoteIP.toString(), &connectedClients) == nullptr) {
-							connectedClients.push_back(aClient);
-							std::cout << "Hay " << connectedClients.size() << " usuarios conectados\n";
-						}
-						else {
-							std::cout << "Cliente ya constaba como conectado\n";
-						}
-
-						//ServerClient aClient;
-						//aClient.SetUserName(users[index].userName);
-						//aClient.SetIp(remoteIP.toString());
-						//aClient.SetPort(remotePort);
-						//connectedClients.push_back(aClient);
+				//if (index >= 0) {
+				//	if (users[index].passWord == passWord) {
+				//		//users[index].connected = true;
+				//		ServerClient* aClient = new ServerClient(remoteIP.toString(), remotePort, 0, std::pair<short, short>(0, 0));
+				//		aClient->SetUserName(users[index].userName);
 
 
-						ombs.Write(true, boolBit);
-					}
-					else {
-						ombs.Write(false, boolBit);
-					}
-				}
-				else {
-					ombs.Write(false, boolBit);
-				}
+				//		if (GetServerClientWithIpPort(remotePort, remoteIP.toString(), &connectedClients) == nullptr) {
+				//			connectedClients.push_back(aClient);
+				//			std::cout << "Hay " << connectedClients.size() << " usuarios conectados\n";
+				//		}
+				//		else {
+				//			std::cout << "Cliente ya constaba como conectado\n";
+				//		}
+
+				//		//ServerClient aClient;
+				//		//aClient.SetUserName(users[index].userName);
+				//		//aClient.SetIp(remoteIP.toString());
+				//		//aClient.SetPort(remotePort);
+				//		//connectedClients.push_back(aClient);
+
+
+				//		ombs.Write(true, boolBit);
+				//	}
+				//	else {
+				//		ombs.Write(false, boolBit);
+				//	}
+				//}
+				//else {
+				//	ombs.Write(false, boolBit);
+				//}
+
+				//bool ok = dbm->Login(userName, passWord);
+				//ombs.Write(ok, boolBit);
 
 				socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
 
@@ -539,6 +549,7 @@ int main() {
 
 	socket->unbind();
 	r.join();
+	//delete dbm;
 
 	return 0;
 }

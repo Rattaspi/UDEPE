@@ -116,14 +116,16 @@ private:
 	std::vector<CriticalMessage> criticalVector; //POR ALGUNA RAZON NO PUEDO ACCEDER A ESTE VECTOR
 public:
 	//Match* inGame;
-	User* associatedUser;
+	
 	std::vector<AccumMoveServer> acumulatedMoves;
 	sf::Clock moveClock;
 	sf::Clock shootClock;
 	int criticalId; //para llevar track del id de los mensajes criticos
+	int sessionID; //id de la entrada de sesion que se ha creado en la base de datos
+	int games; //contador de cuantas partidas se han jugado en una sesion
 	sf::Clock pingCounter;
 	bool isReady;
-	ServerClient(std::string ip, unsigned short port, int id, std::pair<short, short> position) {
+	ServerClient(std::string ip, unsigned short port, int id, std::pair<short, short> position, int sessionID, std::string username) {
 		this->ip = ip;
 		this->port = port;
 		this->matchId = id;
@@ -131,6 +133,9 @@ public:
 		pingCounter.restart();
 		userName = "Player" + id;
 		criticalId = 0;
+		this->sessionID = sessionID;
+		userName = username;
+		games = 0;
 		isReady = false;
 	}
 

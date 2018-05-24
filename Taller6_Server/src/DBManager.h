@@ -1,6 +1,6 @@
 #pragma once
 
-#define HOST "tcp://192.168.1.110:3306"
+#define HOST "tcp://192.168.123.120:3306"
 #define USER "root"
 #define PASSWORD "Pentakill123"
 

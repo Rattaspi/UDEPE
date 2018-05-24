@@ -19,16 +19,6 @@ int main() {
 	std::vector<User> users;
 	DBManager* dbm = new DBManager();
 
-	User devildra("devildrake","ab123");
-	User rattaspi("rattaspi", "ab123");
-	User ah97("ah97", "ab123");
-	User urisel("urisel", "ab123");
-
-	users.push_back(devildra);
-	users.push_back(rattaspi);
-	users.push_back(ah97);
-	users.push_back(urisel);
-
 	std::map<unsigned short, bool>portMap;
 	std::map<int, bool> idMap;
 	for (int i = 0; i < 16; i++) {
@@ -58,9 +48,6 @@ int main() {
 
 	std::thread r(&ReceptionThreadServer, socket, &end, &incomingInfo);
 
-
-
-
 	Match aMatch1;
 	unsigned short aPort = GetFreePort(portMap);
 	int anId = GetFreeId(idMap);
@@ -81,7 +68,6 @@ int main() {
 	std::vector<ServerClient*>connectedClients;
 
 	while (!end) {
-
 		if (!incomingInfo.empty()) {
 			Event infoReceived;
 			PacketType command = HELLO;
@@ -172,7 +158,7 @@ int main() {
 				}else {
 					//NULLCLIENT
 					std::cout << "NULLCLIENT\n";
-				}
+				} 
 				break;
 			}
 			case PacketType::DISCONNECT: {
@@ -183,7 +169,10 @@ int main() {
 						index = i;
 					}
 				}
-				if (index > 0) {
+				if (index > -1) {
+					dbm->EndSession(connectedClients[index]->sessionID, connectedClients[index]->games);
+					std::cout << "DISCONNECTING PLAYER" << std::endl;
+					delete connectedClients[index];
 					connectedClients.erase(connectedClients.begin() + index);
 				}
 
@@ -197,31 +186,23 @@ int main() {
 				imbs.ReadString(&aUserName);
 				imbs.ReadString(&aPassWord);
 
-				bool found = false;
-				for (int i = 0; i < users.size(); i++) {
-					if (users[i].userName == aUserName) {
-						found = true;
-					}
-				}
+				bool ok = dbm->Register(aUserName, aPassWord);
+				//for (int i = 0; i < users.size(); i++) {
+				//	if (users[i].userName == aUserName) {
+				//		found = true;
+				//	}
+				//}
 				OutputMemoryBitStream ombs;
 
 				ombs.Write(PacketType::REGISTER, commandBits);
 
-				if (!found) {
-					User user(aUserName, aPassWord);
-					users.push_back(user);
-
-					//users[index].connected = true;
-					ServerClient* aClient = new ServerClient(remoteIP.toString(), remotePort, 0, std::pair<short, short>(0, 0));
-					aClient->SetUserName(users[users.size()-1].userName);
+				if (ok) {
+					int sessionID = dbm->StartSession(dbm->GetUserID(aUserName));
+					ServerClient* aClient = new ServerClient(remoteIP.toString(), remotePort, 0, std::pair<short, short>(0, 0), sessionID, aUserName);
 					connectedClients.push_back(aClient);
-
-
-					ombs.Write(true, boolBit);
 				}
-				else {
-					ombs.Write(false, boolBit);
-				}
+				
+				ombs.Write(ok, boolBit);
 
 				status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
 
@@ -232,7 +213,6 @@ int main() {
 			}			   
 			case PacketType::LOGIN: {
 				//TODO comprovar el usuario y contraseña contra la base de datos
-				//bool ok = dbm->Login(user, pass);
 				ombs.Write(PacketType::LOGIN, commandBits);
 				std::string userName = "";
 				std::string passWord = "";
@@ -240,53 +220,24 @@ int main() {
 				imbs.ReadString(&userName);
 				imbs.ReadString(&passWord);
 				
-				//int index = -1;
+				bool ok = dbm->Login(userName, passWord);
+				bool connected = false;
 
+				for (int i = 0; i < connectedClients.size(); i++) {
+					if (connectedClients[i]->userName == userName) {
+						connected = true;
+					}
+				}
 
-				//for (int i = 0; i < users.size(); i++) {
-				//	//std::cout << "Recibido usuario " << userName << ", comparando con " << users[i].userName << std::endl;
-
-				//	if (users[i].userName == userName) {
-				//		//std::cout << "Este usuario existe\n";
-
-				//		index = i;
-				//	}
-				//}
-
-				//if (index >= 0) {
-				//	if (users[index].passWord == passWord) {
-				//		//users[index].connected = true;
-				//		ServerClient* aClient = new ServerClient(remoteIP.toString(), remotePort, 0, std::pair<short, short>(0, 0));
-				//		aClient->SetUserName(users[index].userName);
-
-
-				//		if (GetServerClientWithIpPort(remotePort, remoteIP.toString(), &connectedClients) == nullptr) {
-				//			connectedClients.push_back(aClient);
-				//			std::cout << "Hay " << connectedClients.size() << " usuarios conectados\n";
-				//		}
-				//		else {
-				//			std::cout << "Cliente ya constaba como conectado\n";
-				//		}
-
-				//		//ServerClient aClient;
-				//		//aClient.SetUserName(users[index].userName);
-				//		//aClient.SetIp(remoteIP.toString());
-				//		//aClient.SetPort(remotePort);
-				//		//connectedClients.push_back(aClient);
-
-
-				//		ombs.Write(true, boolBit);
-				//	}
-				//	else {
-				//		ombs.Write(false, boolBit);
-				//	}
-				//}
-				//else {
-				//	ombs.Write(false, boolBit);
-				//}
-
-				//bool ok = dbm->Login(userName, passWord);
-				//ombs.Write(ok, boolBit);
+				if (ok&&!connected) {
+					int sessionID = dbm->StartSession(dbm->GetUserID(userName));
+					ServerClient* aClient = new ServerClient(remoteIP.toString(), remotePort, 0, std::pair<short, short>(0, 0), sessionID, userName);
+					connectedClients.push_back(aClient);
+				}
+				else {
+					ok = false;
+				}
+				ombs.Write(ok, boolBit);
 
 				socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
 
@@ -338,6 +289,7 @@ int main() {
 				break;
 			}
 			case PacketType::UPDATEGAMELIST:{
+				std::cout << "EventosSize" << incomingInfo.size() << std::endl;
 				ombs.Write(PacketType::UPDATEGAMELIST, commandBits);
 				ombs.Write((int)aMatches.size(), matchBits);
 				for (int i = 0; i < aMatches.size(); i++) {
@@ -490,6 +442,8 @@ int main() {
 			}
 
 			if (index > -1) {
+				dbm->EndSession(connectedClients[index]->sessionID, connectedClients[index]->games);
+				std::cout << "DISCONNECTING PLAYER" << std::endl;
 				delete connectedClients[index];
 				connectedClients.erase(connectedClients.begin() + index);
 			}

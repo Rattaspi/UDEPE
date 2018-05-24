@@ -781,21 +781,22 @@ int main() {
 					window.draw(headerText1);
 					window.draw(headerText2);
 
+					if (rectangleShapes.size() > 0) {
+						for (int i = 0; i < matchesInfo.size(); i++) {
+							if (rectangleShapes.size() != i) {
+								window.draw(rectangleShapes[i]);
+							}
+							else {
+								std::cout << rectangleShapes.size() << std::endl;
+							}
 
-					for (int i = 0; i < matchesInfo.size(); i++) {
-						if (rectangleShapes.size() != i) {
-							window.draw(rectangleShapes[i]);
-						}
-						else {
-							std::cout << rectangleShapes.size()<<std::endl;
-						}
+							if (matchNames.size() != i) {
+								window.draw(matchNames[i]);
+							}
 
-						if (matchNames.size() != i) {
-							window.draw(matchNames[i]);
-						}
-
-						if (playersText.size() != i) {
-							window.draw(playersText[i]);
+							if (playersText.size() != i) {
+								window.draw(playersText[i]);
+							}
 						}
 					}
 
@@ -838,6 +839,18 @@ int main() {
 							}else{
 
 							}
+
+							OutputMemoryBitStream ombs;
+							ombs.Write(PacketType::UPDATEGAMELIST, commandBits);
+							status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+
+							if (status == sf::Socket::Error) {
+								std::cout << "Error pidiendo actualizacion de partidas\n";
+							}
+							else {
+								std::cout << "Pidiendo actualizacion de paartidas\n";
+							}
+
 							break;
 						}
 						default:
@@ -1059,27 +1072,23 @@ int main() {
 							break;
 						}
 						case PacketType::WELCOME: {
+							clockForTheServer.restart();
+							int aCriticalId = 0;
+							imbs.Read(&aCriticalId, criticalBits);
 							if (!welcomed) {
 								std::cout << "RECIBIDO WELCOME EN SALA\n";
-
 								programState = ProgramState::MATCH;
 								welcomed = true;
 								serverMessageClock.restart();
 								serverMessage = "WELCOME! \nSCORE " + std::to_string(victoryScore) + " GOALS TO WIN";
-								int aCriticalId = 0;
 								int playerSize=0;
-								imbs.Read(&aCriticalId, criticalBits);
 								imbs.Read(&myId, playerSizeBits);
-
 								acks.push_back(aCriticalId);
-
-
 								imbs.Read(&playerSize, playerSizeBits);
 								//playerSize++;
 
 								//std::cout << "aCriticalId = " << aCriticalId << std::endl;
 								std::cout << "playerSize recibido = " << playerSize << std::endl;
-
 
 								for (int i = 0; i < playerSize; i++) {
 									Client* aClient = new Client();
@@ -1114,6 +1123,11 @@ int main() {
 								connected = true;
 								std::cout << "MY ID IS " << myId << std::endl;
 							}
+							else {
+								acks.push_back(aCriticalId);
+
+							}
+
 							break;
 						}
 						default:

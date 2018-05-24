@@ -48,20 +48,21 @@ int main() {
 
 	std::thread r(&ReceptionThreadServer, socket, &end, &incomingInfo);
 
-	Match aMatch1;
+	Match* aMatch1 = new Match();
+
 	unsigned short aPort = GetFreePort(portMap);
 	int anId = GetFreeId(idMap);
-	aMatch1.gameName = "Match Port " + std::to_string(aPort);
-	aMatch1.matchId = anId;
-	aMatch1.SetUp(aPort);
+	aMatch1->gameName = "Match Port " + std::to_string(aPort);
+	aMatch1->matchId = anId;
+	aMatch1->SetUp(aPort);
 	portMap[aPort] = true;
 	idMap[anId] = true;
 
-	receptionThreads.push_back(std::thread(&ReceptionThread, &aMatch1));
-	pingThreads.push_back(std::thread(&PingThread, &aMatch1));
-	matchRoomThreads.push_back(std::thread(&MatchRoomThread, &aMatch1));
+	receptionThreads.push_back(std::thread(&ReceptionThread, aMatch1));
+	pingThreads.push_back(std::thread(&PingThread, aMatch1));
+	matchRoomThreads.push_back(std::thread(&MatchRoomThread, aMatch1));
 
-	aMatches.push_back(&aMatch1);
+	aMatches.push_back(aMatch1);
 
 	sf::Clock pingTimer;
 
@@ -253,18 +254,21 @@ int main() {
 				imbs.ReadString(&gamePass);
 				imbs.Read(&goals, commandBits);
 
-				Match aMatch;
+				Match* aMatch= new Match();
 				unsigned short aPort= GetFreePort(portMap);
 				int anId = GetFreeId(idMap);
-				std::cout << "NAME "<<gameName + "\n";
-				aMatch.gameName = gameName;//"Match Port " + std::to_string(aPort);
-				aMatch.matchId = anId;
-				aMatch.SetUp(aPort);
+				aMatch -> gameName = gameName;//"Match Port " + std::to_string(aPort);
+
+				aMatch->matchId = anId;
+				aMatch->SetUp(aPort);
 				portMap[aPort] = true;
 				idMap[anId] = true;
-				receptionThreads.push_back(std::thread(&ReceptionThread, &aMatch));
+				receptionThreads.push_back(std::thread(&ReceptionThread, aMatch));
+				matchRoomThreads.push_back(std::thread(&MatchRoomThread, aMatch));
+				aMatches.push_back(aMatch);
+				aMatches[aMatches.size() - 1]->gameName = gameName;
+				std::cout << "NAME " << aMatches[aMatches.size()-1]->gameName + "\n";
 
-				aMatches.push_back(&aMatch);
 				//LUEGO HABRA QUE ACORDARSE DE LIBERAR IDS Y PUERTOS CUANDO SE BORREN PARTIDAS
 
 				//ombs.Write(PacketType::UPDATEGAMELIST, commandBits);
@@ -295,6 +299,7 @@ int main() {
 				for (int i = 0; i < aMatches.size(); i++) {
 					ombs.Write((int)aMatches[i]->aClients.size(), playerSizeBits);
 					ombs.Write(aMatches[i]->matchId, matchBits);
+					std::cout << "Enviando nombre de nivel " <<aMatches[i]->gameName<<std::endl;
 					ombs.WriteString(aMatches[i]->gameName);
 				}
 				
@@ -362,6 +367,7 @@ int main() {
 		//std::cout << pingTimer.getElapsedTime().asSeconds()<<" segundos \n";
 
 		for (int i = 0; i < aMatches.size(); i++) {
+
 			if (!aMatches[i]->startFlag&&aMatches[i]->gameHadStarted) {
 				matchRoomThreads[i].join();
 				matchRoomThreads.erase(matchRoomThreads.begin() + i);
@@ -483,9 +489,19 @@ int main() {
 			if (pingThreads[matchToDelete].joinable()) {
 				pingThreads[matchToDelete].join();
 			}
+
+			std::cout << "MATCHTHREADSIZE " << matchThreads.size() << std::endl;
+
+
 			receptionThreads.erase(receptionThreads.begin() + matchToDelete);
 			matchThreads.erase(matchThreads.begin() + matchToDelete);
 			pingThreads.erase(pingThreads.begin() + matchToDelete);
+			
+			Match* aMatchToDelete = aMatches[matchToDelete];
+			if (aMatchToDelete != nullptr) {
+				delete aMatchToDelete;
+			}
+
 			aMatches.erase(aMatches.begin()+matchToDelete);
 		}
 
@@ -549,7 +565,7 @@ void ReceptionThreadServer(sf::UdpSocket* socket, bool*end, std::queue<Event*>*i
 			std::cout << "Error al recibir informacion" << std::endl;
 		}
 		else {
-			std::cout << "Recibido comando" << std::endl;
+			//std::cout << "Recibido comando" << std::endl;
 			incomingInfo->push(new Event(message, sizeReceived, incomingIP, incomingPort));
 		}
 	}
@@ -1087,6 +1103,9 @@ void MatchRoomThread(Match* match) {
 			int repeatingId = 0;
 			std::pair<short, short> coords{ 0,0 };
 			std::pair<short, short> auxCoords{ 0,0 };
+
+			std::cout << "Match con puerto " << match->matchPort << " Recibe command " << command << std::endl;
+
 			switch (command) {
 				case ACK:
 					aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &match->aClients);

@@ -74,7 +74,7 @@ void Match::UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*
 		if (coords->first <= 0 + ballRadius) {
 			std::cout << "GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOAL\n";
 			*rightScore += 1;
-			*gameOver = CheckGameOver(*leftScore, *rightScore, aClients, socket);
+			*gameOver = CheckGameOver(*leftScore, *rightScore, aClients, socket, winScore);
 			for (int i = 0; i < aClients->size(); i++) {
 				OutputMemoryBitStream ombs;
 				ombs.Write(PacketType::GOAL, commandBits);
@@ -91,7 +91,7 @@ void Match::UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*
 		else if (coords->first >= windowWidth - ballRadius * 2) {
 			std::cout << "GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOAL\n";
 			*leftScore += 1;
-			*gameOver = CheckGameOver(*leftScore, *rightScore, aClients, socket);
+			*gameOver = CheckGameOver(*leftScore, *rightScore, aClients, socket, winScore);
 
 			for (int i = 0; i < aClients->size(); i++) {
 				OutputMemoryBitStream ombs;
@@ -111,9 +111,9 @@ void Match::UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*
 	//std::cout << "New ball pos: " << coords->first <<", " << coords->second<<std::endl;
 }
 
-bool Match::CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket) {
+bool Match::CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, int winScore) {
 	//Si gana left se pasa un 0, si gana right se pasa un 1
-	if (leftScore == 1) {
+	if (leftScore == winScore) {
 		for (int i = 0; i < aClients->size(); i++) {
 			OutputMemoryBitStream ombs;
 			ombs.Write(PacketType::GAMEOVER, commandBits);
@@ -123,7 +123,7 @@ bool Match::CheckGameOver(int leftScore, int rightScore, std::vector<ServerClien
 		}
 		return true;
 	}
-	else if (rightScore == 1) {
+	else if (rightScore == winScore) {
 		for (int i = 0; i < aClients->size(); i++) {
 			OutputMemoryBitStream ombs;
 			ombs.Write(PacketType::GAMEOVER, commandBits);

@@ -48,21 +48,21 @@ int main() {
 
 	std::thread r(&ReceptionThreadServer, socket, &end, &incomingInfo);
 
-	Match* aMatch1 = new Match();
+	//Match* aMatch1 = new Match();
 
-	unsigned short aPort = GetFreePort(portMap);
-	int anId = GetFreeId(idMap);
-	aMatch1->gameName = "Match Port " + std::to_string(aPort);
-	aMatch1->matchId = anId;
-	aMatch1->SetUp(aPort);
-	portMap[aPort] = true;
-	idMap[anId] = true;
+	//unsigned short aPort = GetFreePort(portMap);
+	//int anId = GetFreeId(idMap);
+	//aMatch1->gameName = "Match Port " + std::to_string(aPort);
+	//aMatch1->matchId = anId;
+	//aMatch1->SetUp(aPort);
+	//portMap[aPort] = true;
+	//idMap[anId] = true;
 
-	receptionThreads.push_back(std::thread(&ReceptionThread, aMatch1));
-	pingThreads.push_back(std::thread(&PingThread, aMatch1));
-	matchRoomThreads.push_back(std::thread(&MatchRoomThread, aMatch1));
+	//receptionThreads.push_back(std::thread(&ReceptionThread, aMatch1));
+	//pingThreads.push_back(std::thread(&PingThread, aMatch1));
+	//matchRoomThreads.push_back(std::thread(&MatchRoomThread, aMatch1));
 
-	aMatches.push_back(aMatch1);
+	//aMatches.push_back(aMatch1);
 
 	sf::Clock pingTimer;
 
@@ -114,7 +114,6 @@ int main() {
 
 				ServerClient* aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &connectedClients);
 				Match* aMatch = GetMatchWithId(aMatchId, &aMatches);
-				ombs.Write(PacketType::JOINGAME, commandBits);
 				
 				if (aClient != nullptr) {
 					if (aMatch != nullptr) {
@@ -122,8 +121,9 @@ int main() {
 							if (aClient->matchId > -1) {
 								if (aMatch->aClients.size() < 4) {
 									//////////////////////////////////////////////////////////////AQUI IRIA LA MAX CAPACIDAD DEL MATCH
-									
-									ombs.Write(true, boolBit);
+									ombs.Write(PacketType::JOINGAME, commandBits);
+
+									//ombs.Write(1, boolBit);
 									ombs.Write(aMatch->matchPort, portBits);
 									AddPlayer(aClient, aMatch);
 
@@ -137,17 +137,22 @@ int main() {
 									std::cout << "Enviando puerto" << aMatch->matchPort<<" \n";
 
 								}else {
-									ombs.Write(false, boolBit);
+									//ombs.Write(0, boolBit);
+									ombs.Write(PacketType::NOJOINGAME, commandBits);
 									std::cout << "B\n";
 
 								}
 							}else {
-								ombs.Write(false, boolBit);
+								ombs.Write(PacketType::NOJOINGAME, commandBits);
+
+								//ombs.Write(0, boolBit);
 								std::cout << "C\n";
 
 							}
 						}else {
-							ombs.Write(true, boolBit);
+							//ombs.Write(1, boolBit);
+							ombs.Write(PacketType::JOINGAME, commandBits);
+
 							ombs.Write(aMatch->matchPort, portBits);
 							std::cout << "Enviando puerto" << aMatch->matchPort << " \n";
 							//AddPlayer(aClient, aMatch);
@@ -162,7 +167,8 @@ int main() {
 
 						}
 					}else {
-						ombs.Write(false, boolBit);
+						ombs.Write(PacketType::NOJOINGAME, commandBits);
+						//ombs.Write(0, boolBit);
 						std::cout << "E\n";
 
 					}
@@ -273,7 +279,7 @@ int main() {
 				unsigned short aPort= GetFreePort(portMap);
 				int anId = GetFreeId(idMap);
 				aMatch -> gameName = gameName;//"Match Port " + std::to_string(aPort);
-
+				aMatch->winScore = goals;
 				aMatch->matchId = anId;
 				aMatch->SetUp(aPort);
 				portMap[aPort] = true;
@@ -384,33 +390,38 @@ int main() {
 		for (int i = 0; i < aMatches.size(); i++) {
 
 			if (!aMatches[i]->startFlag&&aMatches[i]->gameHadStarted) {
+				int aClientSizeMinus = aMatches[i]->aClients.size();
 				matchRoomThreads[i].join();
 				matchRoomThreads.erase(matchRoomThreads.begin() + i);
+				std::cout << "Iniciado thread de Partida, terminando thread de room\n";
 				matchThreads.push_back(std::thread(&MatchThread, aMatches[i]));
 				aMatches[i]->startFlag = true;
-
 				for (int j = 0; j < aMatches[i]->aClients.size(); j++) {
-
 					OutputMemoryBitStream ombs;
 
 					ombs.Write(PacketType::WELCOME, commandBits);
 
 					aMatches[i]->aClients[j]->matchId = j;
 					ombs.Write(aMatches[i]->aClients[j]->criticalId, criticalBits);
+					ombs.Write(aMatches[i]->winScore, criticalBits);
 
 					ombs.Write(aMatches[i]->aClients[j]->GetMatchID(), playerSizeBits);
 
-					int aClientSizeMinus = aMatches[i]->aClients.size();
 
-
-					aClientSizeMinus;
 					ombs.Write(aClientSizeMinus, playerSizeBits);
 
+					//std::cout << "Escribiendo aClientSizeMinus " << aClientSizeMinus << std::endl;;
+
+
 					for (int k = 0; k < aMatches[i]->aClients.size(); k++) {
-						ombs.Write(aMatches[i]->aClients[k]->GetMatchID(), playerSizeBits);
+
+						//std::cout << "Escribiendo idPlayer " << aMatches[i]->aClients[k]->GetMatchID() << std::endl;;
+
+
+						ombs.Write(k, playerSizeBits);
 						//std::cout << "Adding player with id " << aMatches[i]->aClients[k]->GetMatchID() <<"and coords 0,0"<< std::endl;
-						ombs.Write((short)0, coordsbits);
-						ombs.Write((short)0, coordsbits);
+						ombs.Write((short)600, coordsbits);
+						ombs.Write((short)600, coordsbits);
 
 						//ombs.Write(aMatches[i]->aClients[k]->GetMatchID(), playerSizeBits);
 						//ombs.Write(aMatches[i]->aClients[k]->GetPosition().first, coordsbits);
@@ -418,7 +429,7 @@ int main() {
 					}
 
 
-					std::cout << "Creado un Welcome con informacion de " << aMatches[i]->aClients.size() << "\n";
+					//std::cout << "Creado un Welcome con informacion de " << aMatches[i]->aClients.size() << "\n";
 
 
 					//std::cout << "WelcomeAdded\n";
@@ -1119,8 +1130,6 @@ void MatchRoomThread(Match* match) {
 			std::pair<short, short> coords{ 0,0 };
 			std::pair<short, short> auxCoords{ 0,0 };
 
-			std::cout << "Match con puerto " << match->matchPort << " Recibe command " << command << std::endl;
-
 			switch (command) {
 				case ACK:
 					aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &match->aClients);
@@ -1149,6 +1158,22 @@ void MatchRoomThread(Match* match) {
 					}
 
 					break;
+				}case PacketType::UPDATEROOM: {
+					OutputMemoryBitStream ombs;
+					sf::Socket::Status status;
+					ombs.Write(PacketType::UPDATEROOM, commandBits);
+					int clientSizeInt = match->aClients.size();
+					ombs.Write(clientSizeInt, playerSizeBits);
+
+					for (int j = 0; j<match->aClients.size(); j++) {
+						ombs.WriteString(match->aClients[j]->userName);
+					}
+
+					status = match->socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), remoteIP, remotePort);
+					if (status == sf::Socket::Error) {
+						std::cout << "Error enviando UPDATEROOM\n";
+					}
+					break;
 				}
 				case PacketType::EXITROOM: {
 					aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &match->aClients);
@@ -1156,10 +1181,23 @@ void MatchRoomThread(Match* match) {
 
 						OutputMemoryBitStream auxOmbs;
 						auxOmbs.Write(PacketType::EXITROOM, commandBits);
-						auxOmbs.Write(aClient->criticalId, criticalBits);
+						//auxOmbs.Write(aClient->criticalId, criticalBits);
 
-						aClient->AddCriticalMessage(new CriticalMessage(aClient->criticalId, auxOmbs.GetBufferPtr(), auxOmbs.GetByteLength()));
+						//aClient->AddCriticalMessage(new CriticalMessage(aClient->criticalId, auxOmbs.GetBufferPtr(), auxOmbs.GetByteLength()));
+						status = match->socket->send(auxOmbs.GetBufferPtr(), auxOmbs.GetByteLength(), remoteIP, remotePort);
 
+						if (status == sf::Socket::Error) {
+							std::cout << "Error enviando EXITROOM\n";
+						}
+
+						int index = GetIndexServerClientWithId(aClient->matchId, &match->aClients);
+
+						std::cout << "El cliente con id " << aClient->matchId << " tiene un indice " << index << std::endl;
+
+						if (index > -1) {
+							match->aClients.erase(match->aClients.begin() + index);
+							std::cout << "Despues de borrar un cliente el tamaño es " << match->aClients.size() << std::endl;
+						}
 
 						for (int i = 0; i<match->aClients.size(); i++) {
 							OutputMemoryBitStream ombs;
@@ -1177,6 +1215,15 @@ void MatchRoomThread(Match* match) {
 							if (status == sf::Socket::Error) {
 								std::cout << "Error enviando UPDATEROOM\n";
 							}
+						}
+					}
+					else {
+						OutputMemoryBitStream auxOmbs;
+						auxOmbs.Write(PacketType::EXITROOM, commandBits);
+						status = match->socket->send(auxOmbs.GetBufferPtr(), auxOmbs.GetByteLength(), remoteIP, remotePort);
+
+						if (status == sf::Socket::Error) {
+							std::cout << "Error enviando EXITROOM\n";
 						}
 					}
 					break;
@@ -1205,6 +1252,7 @@ void MatchRoomThread(Match* match) {
 					break; 
 				}
 				default:
+					std::cout << "Match con puerto " << match->matchPort << " Recibe command " << command << std::endl;
 					break;
 			}
 

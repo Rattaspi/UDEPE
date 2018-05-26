@@ -41,6 +41,7 @@ public:
 	bool gameOver = false;
 	int leftScore = 0;
 	int rightScore = 0;
+	int winScore;
 	//void Run();
 	//void Run(Match* match);
 
@@ -50,6 +51,6 @@ public:
 	void SendBallPos(std::vector<ServerClient*>*aClients, sf::UdpSocket* socket, std::pair<short, short> ballPos);
 	void UpdateBall(std::pair<float, float>* coords, std::pair<float, float>*speed, float delta, int*, int*, std::vector<ServerClient*>*, sf::UdpSocket*, bool*);
 	int GetAvailableId(std::vector<ServerClient*>aClients, int num);
-	bool CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket);
+	bool CheckGameOver(int leftScore, int rightScore, std::vector<ServerClient*>*aClients, sf::UdpSocket* socket,int );
 	bool Match::ContainsClient(ServerClient* aClient);
 };

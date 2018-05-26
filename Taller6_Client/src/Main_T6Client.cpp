@@ -137,6 +137,8 @@ int main() {
 	int selectedOption=0;
 	bool logInAnswer = true;
 	bool joinAnswer = true;
+	bool readyPressed = false;
+
 	while (!end){
 			switch (programState) {
 			case SERVERCHECK: {
@@ -610,11 +612,7 @@ int main() {
 						}
 						case PacketType::JOINGAME:{
 							bool aBool = false;
-							imbs.Read(&aBool, boolBit);
 
-							std::cout << "Recibido joinGame con respuesta " << aBool << std::endl;
-
-							if (aBool) {
 								unsigned short aMatchPort = 0;
 								imbs.Read(&aMatchPort, portBits);
 								matchPort = aMatchPort;
@@ -631,7 +629,22 @@ int main() {
 
 
 								programState = MATCH_ROOM;
-							}
+
+								OutputMemoryBitStream ombs;
+								ombs.Write(PacketType::UPDATEROOM, commandBits);
+								status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
+
+								if (status == sf::Socket::Error) {
+									std::cout << "Error pidiendo actualizacion de partidas\n";
+								}
+								else {
+									std::cout << "Pidiendo actualizacion de paartidas\n";
+								}
+
+							joinAnswer = true;
+							break;
+						}case PacketType::NOJOINGAME: {
+							std::cout << "No puedes unirte a la partida\n";
 							joinAnswer = true;
 							break;
 						}
@@ -903,7 +916,7 @@ int main() {
 					goalsNumberRect.setPosition(windowWidth / 2 - goalsNumberRect.getSize().x / 2, 100 + (windowHeight / 8) * 3 - goalsNumberRect.getSize().y / 2);
 					goalsNumberRect.setFillColor(sf::Color::Green);
 
-					sf::Text goalNumbersTextHeader("Numero de goles", font, 30);
+					sf::Text goalNumbersTextHeader("Numero de goles (max 30)", font, 30);
 					goalNumbersTextHeader.setFillColor(sf::Color::White);
 					goalNumbersTextHeader.setPosition(sf::Vector2f(goalsNumberRect.getPosition().x + 20, goalsNumberRect.getPosition().y - 60));
 
@@ -1032,7 +1045,13 @@ int main() {
 						ombs.WriteString(roomName);
 						ombs.WriteString(roomPass);
 						std::string::size_type sz;   // alias of size_t
+
 						int goals = std::stoi(goalsNumber, &sz);
+
+						if (goals > 30) {
+							goals = 30;
+						}
+
 						ombs.Write(goals, commandBits);
 
 						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
@@ -1090,10 +1109,13 @@ int main() {
 						case PacketType::WELCOME: {
 							clockForTheServer.restart();
 							int aCriticalId = 0;
+							int victoryScore = 0;
 							imbs.Read(&aCriticalId, criticalBits);
+							imbs.Read(&victoryScore, criticalBits);
 							if (!welcomed) {
 								std::cout << "RECIBIDO WELCOME EN SALA\n";
 								programState = ProgramState::MATCH;
+								readyPressed = false;
 								welcomed = true;
 								serverMessageClock.restart();
 								serverMessage = "WELCOME! \nSCORE " + std::to_string(victoryScore) + " GOALS TO WIN";
@@ -1147,13 +1169,14 @@ int main() {
 							break;
 						}
 						case EXITROOM: {
-							int aCriticalId = 0;
-							imbs.Read(&aCriticalId, criticalBits);
+							//int aCriticalId = 0;
+							//imbs.Read(&aCriticalId, criticalBits);
 							aMsjs.clear();
 							aRoomNames.clear();
 							ResetValues(&selectedOption);
 							programState = MAIN_MENU;
-							acks.push_back(aCriticalId);
+							readyPressed = false;
+							//acks.push_back(aCriticalId);
 							break; 
 						}
 						case MSG: {
@@ -1200,8 +1223,8 @@ int main() {
 					}
 
 					for (int i = 0; i < aRoomNames.size(); i++) {
-						sf::Text aText(aRoomNames[i], font, 15);
-						aText.setPosition((float)70, windowHeight - i * 18);
+						sf::Text aText(aRoomNames[i], font, 40);
+						aText.setPosition((float)70, windowHeight - 200 - i * 46);
 
 						if (aRoomNames[i] == myUsername) {
 							aText.setFillColor(sf::Color::Green);
@@ -1219,7 +1242,12 @@ int main() {
 
 					sf::RectangleShape rect1(sf::Vector2f(200,100));
 					rect1.setPosition(0, windowHeight - rect1.getSize().y - 40);
-					rect1.setFillColor(sf::Color::Green);
+					if (readyPressed) {
+						rect1.setFillColor(sf::Color::Blue);
+					}
+					else {
+						rect1.setFillColor(sf::Color::Green);
+					}
 
 					sf::Text rect1Header("Ready",font,40);
 					rect1Header.setPosition(rect1.getPosition().x+100-20, rect1.getPosition().y+50-20);
@@ -1283,6 +1311,7 @@ int main() {
 								if (y >= rect1.getPosition().y && y <= rect1.getPosition().y + rect1.getSize().y) {
 									if (x >= rect1.getPosition().x && x <= rect1.getPosition().x + rect1.getSize().x) {
 										//PULSADO READY
+										readyPressed = true;
 										OutputMemoryBitStream ombs;
 										ombs.Write(PacketType::READY, commandBits);
 										status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
@@ -1300,7 +1329,7 @@ int main() {
 										ombs.Write(PacketType::EXITROOM, commandBits);
 										status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
 
-										std::cout << "ENVIANDO READY A PORT " << matchPort << "\n";
+										std::cout << "ENVIANDO EXITROOM " << matchPort << "\n";
 
 										if (status == sf::Socket::Error) {
 											std::cout << "Error enviando ready\n";
@@ -1372,12 +1401,17 @@ int main() {
 					switch (command) {
 					case PacketType::WELCOME: {
 						if (!welcomed) {
+							int victoryScore = 0;
 							std::cout << "RECIBIDO WELCOME EN PARTIDA\n";
 
 							welcomed = true;
 							serverMessageClock.restart();
-							serverMessage = "WELCOME! \nSCORE " + std::to_string(victoryScore) + " GOALS TO WIN";
 							imbs.Read(&aCriticalId, criticalBits);
+							imbs.Read(&victoryScore, criticalBits);
+
+							serverMessage = "WELCOME! \nSCORE " + std::to_string(victoryScore) + " GOALS TO WIN";
+
+
 							imbs.Read(&myId, playerSizeBits);
 
 							acks.push_back(aCriticalId);

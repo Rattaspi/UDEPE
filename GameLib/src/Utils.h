@@ -3,7 +3,7 @@
 #include "OutputMemoryBitStream.h"
 #include "InputMemoryBitStream.h"
 
-enum PacketType {HELLO, WELCOME, NEWPLAYER, DISCONNECT, ACK, PING, ACKPING, ACKMOVE, SHOOT, GAMEOVER, GAMESTART, GOAL, NOTWELCOME, MOVE, MOVEBALL, JOINGAME, CREATEGAME, UPDATEGAMELIST, LOGIN, REGISTER, MSG, READY, UPDATEROOM, EXITROOM};
+enum PacketType {HELLO, WELCOME, NEWPLAYER, DISCONNECT, ACK, PING, ACKPING, ACKMOVE, SHOOT, GAMEOVER, GAMESTART, GOAL, NOTWELCOME, MOVE, MOVEBALL, JOINGAME, NOJOINGAME, CREATEGAME, UPDATEGAMELIST, LOGIN, REGISTER, MSG, READY, UPDATEROOM, EXITROOM };
 const int commandBits = 5;
 const int portBits = 16;
 const int matchBits = 4;
@@ -26,7 +26,7 @@ const std::pair<short, short> rightGoalBot;
 const int windowWidth = 1000;
 const int windowHeight = 800;
 const int shootCoolDown = 500;
-const int victoryScore = 10;
+//const int victoryScore = 10;
 const std::pair<short, short> ballStartPos{windowWidth/2,300};
 
 static void RemoveNonAckMovesUntilId(std::vector<AccumMove>*aMoves, int id) {

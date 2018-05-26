@@ -131,6 +131,8 @@ int main() {
 	std::string roomName = "";
 	std::string roomPass = "";
 	std::string goalsNumber = "";
+	std::vector<std::string>aRoomNames;
+	std::string myMessage = "";
 
 	int selectedOption=0;
 	bool logInAnswer = true;
@@ -610,14 +612,27 @@ int main() {
 							bool aBool = false;
 							imbs.Read(&aBool, boolBit);
 
+							std::cout << "Recibido joinGame con respuesta " << aBool << std::endl;
+
 							if (aBool) {
 								unsigned short aMatchPort = 0;
 								imbs.Read(&aMatchPort, portBits);
 								matchPort = aMatchPort;
-								std::cout << "matchPort = " << matchPort;
+								//std::cout << "matchPort = " << matchPort;
+
+								int aSize = 0;
+								imbs.Read(&aSize, playerSizeBits);
+								aRoomNames.clear();
+								for (int i = 0; i < aSize; i++){
+									std::string aName = "";
+									imbs.ReadString(&aName);
+									aRoomNames.push_back(aName);
+								}
+
+
 								programState = MATCH_ROOM;
 							}
-
+							joinAnswer = true;
 							break;
 						}
 						case PacketType::PING: {
@@ -669,14 +684,15 @@ int main() {
 
 
 
-					sf::RectangleShape rect3(sf::Vector2f(300.0f, 100.0f));
-					rect3.setSize(sf::Vector2f(400, 100.0f));
+					sf::RectangleShape rect3(sf::Vector2f(260.0f, 100.0f));
+					rect3.setSize(sf::Vector2f(260.0f, 100.0f));
 					rect3.setPosition(rect1.getPosition().x + rect1.getSize().x,rect1.getPosition().y);
 					rect3.setFillColor(sf::Color::Red);
 
 					sf::Text disconnectText("Disconnect", font, 40);
 					disconnectText.setPosition(sf::Vector2f(rect3.getPosition().x+40, rect3.getPosition().y+20));
-					CreateGameText.setFillColor(sf::Color::White);
+					disconnectText.setFillColor(sf::Color::White);
+
 
 
 					sf::Event evento;
@@ -1130,6 +1146,43 @@ int main() {
 
 							break;
 						}
+						case EXITROOM: {
+							int aCriticalId = 0;
+							imbs.Read(&aCriticalId, criticalBits);
+							aMsjs.clear();
+							aRoomNames.clear();
+							ResetValues(&selectedOption);
+							programState = MAIN_MENU;
+							acks.push_back(aCriticalId);
+							break; 
+						}
+						case MSG: {
+							std::string aMsj = "";
+							imbs.ReadString(&aMsj);
+							aMsjs.push_back(aMsj);
+
+							if (aMsjs.size() > 25) {
+								aMsjs.erase(aMsjs.begin());
+							}
+							break;
+						}
+						case UPDATEROOM: {
+							int aSize = 0;
+
+							aRoomNames.clear();
+							imbs.Read(&aSize, playerSizeBits);
+
+							std::cout << "Recibido UPDATEROOM con " << aSize << " nombres\n";
+
+
+							for (int i = 0; i < aSize; i++) {
+								std::string aUserName = "";
+								imbs.ReadString(&aUserName);
+								aRoomNames.push_back(aUserName);
+							}
+
+							break;
+						}
 						default:
 							break;
 						}
@@ -1137,12 +1190,28 @@ int main() {
 					}
 
 					std::vector<sf::Text>chat;
+					std::vector<sf::Text>userNamesText;
+
 					for (int i = 0; i < aMsjs.size(); i++) {
-						sf::Text aText(aMsjs[i],font,12);
-						aText.setPosition((float)windowWidth/2,50+i*16);
+						sf::Text aText(aMsjs[i],font,15);
+						aText.setPosition((float)windowWidth/2+70,50+i*18);
+						aText.setFillColor(sf::Color::White);
 						chat.push_back(aText);
 					}
 
+					for (int i = 0; i < aRoomNames.size(); i++) {
+						sf::Text aText(aRoomNames[i], font, 15);
+						aText.setPosition((float)70, windowHeight - i * 18);
+
+						if (aRoomNames[i] == myUsername) {
+							aText.setFillColor(sf::Color::Green);
+						}
+						else {
+							aText.setFillColor(sf::Color::White);
+						}
+
+						userNamesText.push_back(aText);
+					}
 
 					sf::RectangleShape rect2(sf::Vector2f(50, windowHeight));
 					rect2.setPosition((float)windowWidth/2,0);
@@ -1156,6 +1225,26 @@ int main() {
 					rect1Header.setPosition(rect1.getPosition().x+100-20, rect1.getPosition().y+50-20);
 					rect1Header.setFillColor(sf::Color::Black);
 
+					sf::RectangleShape rect3(sf::Vector2f(300.0f, 100.0f));
+					rect3.setSize(sf::Vector2f(250, 100.0f));
+					rect3.setPosition(rect1.getPosition().x+rect1.getSize().x,rect1.getPosition().y);
+					rect3.setFillColor(sf::Color::Red);
+
+					sf::RectangleShape rect4(sf::Vector2f(300.0f, 50));
+					rect4.setSize(sf::Vector2f(windowWidth, 10.0f));
+					rect4.setPosition(0, windowHeight - 100);
+					rect4.setFillColor(sf::Color::Cyan);
+
+					sf::Text disconnectText("Disconnect", font, 40);
+					disconnectText.setPosition(sf::Vector2f(rect3.getPosition().x + 40, rect3.getPosition().y + 20));
+					disconnectText.setFillColor(sf::Color::White);
+
+					sf::Text myMessageText(myMessage, font, 20);
+					myMessageText.setPosition(sf::Vector2f((float)windowWidth / 2 + 70, rect4.getPosition().y+rect4.getSize().y+20));
+					myMessageText.setFillColor(sf::Color::White);
+
+					
+
 					sf::Event evento;
 
 					while (window.pollEvent(evento)) {
@@ -1164,6 +1253,27 @@ int main() {
 							window.close();
 							socket->unbind();
 							end = true;
+							break;
+						case sf::Event::KeyPressed:
+							if (evento.key.code == sf::Keyboard::Return) {
+								OutputMemoryBitStream ombs;
+								ombs.Write(PacketType::MSG, commandBits);
+								ombs.WriteString(myMessage);
+
+								socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
+
+								myMessage = "";
+							}else if (evento.key.code == sf::Keyboard::BackSpace) {
+								myMessage.erase(myMessage.size() - 1);
+							}
+							else if (evento.key.code == sf::Keyboard::Space) {
+								myMessage += " ";
+							}
+							break;
+						case sf::Event::TextEntered:
+							if (evento.text.unicode >= 32 && evento.text.unicode <= 126) {
+								myMessage += (char)evento.text.unicode;
+							}
 							break;
 						case sf::Event::MouseButtonPressed:
 							if (evento.mouseButton.button == sf::Mouse::Left) {
@@ -1185,19 +1295,42 @@ int main() {
 
 
 									}
+									else if (x >= rect3.getPosition().x&& x<= rect3.getPosition().x + rect3.getSize().x) {
+										OutputMemoryBitStream ombs;
+										ombs.Write(PacketType::EXITROOM, commandBits);
+										status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
+
+										std::cout << "ENVIANDO READY A PORT " << matchPort << "\n";
+
+										if (status == sf::Socket::Error) {
+											std::cout << "Error enviando ready\n";
+										}
+									}
 								}
 							}
 							break;
 						}
 					}
 
+
+					window.draw(rect4);
+					window.draw(rect3);
+					window.draw(disconnectText);
+					window.draw(rect2);
+					window.draw(rect1);
+					window.draw(rect1Header);
 					for (int i = 0; i < chat.size(); i++) {
 						window.draw(chat[i]);
 					}
 
-					window.draw(rect2);
-					window.draw(rect1);
-					window.draw(rect1Header);
+
+
+					window.draw(myMessageText);
+
+					for (int i = 0; i < userNamesText.size(); i++) {
+						window.draw(userNamesText[i]);
+					}
+
 					window.display();
 				}
 				break;
@@ -1473,16 +1606,16 @@ int main() {
 					incomingInfo.pop();
 				}
 
-				if (acks.size() > 0) {
-					for (int i = 0; i < acks.size(); i++) {
-						OutputMemoryBitStream ombs;
-						ombs.Write(PacketType::ACK, commandBits);
-						ombs.Write(acks[i], criticalBits);
-						std::cout << "Sending ack " << acks[i] << std::endl;
-						socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
-					}
-					acks.clear();
-				}
+				//if (acks.size() > 0) {
+				//	for (int i = 0; i < acks.size(); i++) {
+				//		OutputMemoryBitStream ombs;
+				//		ombs.Write(PacketType::ACK, commandBits);
+				//		ombs.Write(acks[i], criticalBits);
+				//		std::cout << "Sending ack " << acks[i] << std::endl;
+				//		socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
+				//	}
+				//	acks.clear();
+				//}
 
 
 				if (window.isOpen()) {
@@ -1765,6 +1898,18 @@ int main() {
 				break;
 			}
 		}
+
+		if (acks.size() > 0) {
+			for (int i = 0; i < acks.size(); i++) {
+				OutputMemoryBitStream ombs;
+				ombs.Write(PacketType::ACK, commandBits);
+				ombs.Write(acks[i], criticalBits);
+				std::cout << "Sending ack " << acks[i] << std::endl;
+				socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
+			}
+			acks.clear();
+		}
+
 	}
 	
 	if (window.isOpen()) {

@@ -27,6 +27,7 @@ public:
 	bool sentEnd = false;
 	bool gameHadStarted = false;
 	bool startFlag = false;
+	int prevPlayerSize=0;
 	std::queue<Event*> incomingInfo; //cola de paquetes entrantes
 	std::vector<std::vector<AccumMoveServer>> acumulatedMoves;
 	std::pair<short, short>initialPositions[4] = { { 200,200 },{ 200,400 },{ 800,200 },{ 800,400 } }; //formación inicial de los jugadores

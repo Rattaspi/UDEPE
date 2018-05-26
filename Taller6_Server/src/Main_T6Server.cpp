@@ -126,6 +126,14 @@ int main() {
 									ombs.Write(true, boolBit);
 									ombs.Write(aMatch->matchPort, portBits);
 									AddPlayer(aClient, aMatch);
+
+									int clientSizeInt = aMatch->aClients.size();
+									ombs.Write(clientSizeInt, playerSizeBits);
+
+									for (int j = 0; j<aMatch->aClients.size(); j++) {
+										ombs.WriteString(aMatch->aClients[j]->userName);
+									}
+
 									std::cout << "Enviando puerto" << aMatch->matchPort<<" \n";
 
 								}else {
@@ -144,6 +152,13 @@ int main() {
 							std::cout << "Enviando puerto" << aMatch->matchPort << " \n";
 							//AddPlayer(aClient, aMatch);
 							std::cout << "D\n";
+
+							int clientSizeInt = aMatch->aClients.size();
+							ombs.Write(clientSizeInt, playerSizeBits);
+
+							for (int j = 0; j<aMatch->aClients.size(); j++) {
+								ombs.WriteString(aMatch->aClients[j]->userName);
+							}
 
 						}
 					}else {
@@ -1135,10 +1150,95 @@ void MatchRoomThread(Match* match) {
 
 					break;
 				}
+				case PacketType::EXITROOM: {
+					aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &match->aClients);
+					if (aClient != nullptr) {
+
+						OutputMemoryBitStream auxOmbs;
+						auxOmbs.Write(PacketType::EXITROOM, commandBits);
+						auxOmbs.Write(aClient->criticalId, criticalBits);
+
+						aClient->AddCriticalMessage(new CriticalMessage(aClient->criticalId, auxOmbs.GetBufferPtr(), auxOmbs.GetByteLength()));
+
+
+						for (int i = 0; i<match->aClients.size(); i++) {
+							OutputMemoryBitStream ombs;
+							sf::Socket::Status status;
+							ombs.Write(PacketType::UPDATEROOM, commandBits);
+							int clientSizeInt = match->aClients.size();
+							ombs.Write(clientSizeInt, playerSizeBits);
+
+							for (int j = 0; j<match->aClients.size(); j++) {
+								ombs.WriteString(match->aClients[j]->userName);
+							}
+
+							status = match->socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), match->aClients[i]->GetIP(), match->aClients[i]->GetPort());
+
+							if (status == sf::Socket::Error) {
+								std::cout << "Error enviando UPDATEROOM\n";
+							}
+						}
+					}
+					break;
+				}
+				case PacketType::MSG: {
+					aClient = GetServerClientWithIpPort(remotePort, remoteIP.toString(), &match->aClients);
+					if (aClient != nullptr) {
+						std::string message = "";
+						std::string finalMessage = "";
+						finalMessage = aClient->userName + ": ";
+						imbs.ReadString(&message);
+						finalMessage += message;
+						ombs.Write(PacketType::MSG, commandBits);
+						ombs.WriteString(finalMessage);
+						for (int i = 0; i<match->aClients.size(); i++) {
+							sf::Socket::Status status;
+							status = match->socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), match->aClients[i]->GetIP(), match->aClients[i]->GetPort());
+
+							if (status == sf::Socket::Error) {
+								std::cout << "Error enviando MSG\n";
+							}
+						}
+
+					}
+
+					break; 
+				}
+				default:
+					break;
 			}
 
 			match->incomingInfo.pop();
 		}
+
+		if (match->prevPlayerSize!=match->aClients.size()) {
+			match->prevPlayerSize = match->aClients.size();
+			for (int i = 0; i<match->aClients.size(); i++) {
+				OutputMemoryBitStream ombs;
+				sf::Socket::Status status;
+				ombs.Write(PacketType::UPDATEROOM, commandBits);
+				int clientSizeInt = match->aClients.size();
+				ombs.Write(clientSizeInt, playerSizeBits);
+
+				for (int j = 0; j<match->aClients.size(); j++) {
+
+					std::cout << j << std:: endl;
+
+
+					ombs.WriteString(match->aClients[j]->userName);
+				}
+				
+				status = match->socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), match->aClients[i]->GetIP(), match->aClients[i]->GetPort());
+
+				if (status == sf::Socket::Error) {
+					std::cout << "Error enviando UPDATEROOM\n";
+				}
+				else {
+					std::cout << "ENVIADO UPDATEROOM\n";
+				}
+			}
+		}
+
 		bool allReady=true;
 		if (match->aClients.size() ==2 ) {
 			for (int i = 0; i < match->aClients.size(); i++) {

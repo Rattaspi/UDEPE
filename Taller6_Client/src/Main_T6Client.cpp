@@ -159,7 +159,7 @@ int main() {
 
 				if (!incomingInfo.empty()) {
 					Event infoReceived;
-					PacketType command = HELLO;
+					PacketType command = PacketType::LOGIN;
 					infoReceived = incomingInfo.front();
 					InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
 					imbs.Read(&command, commandBits);
@@ -205,35 +205,39 @@ int main() {
 
 					if (!incomingInfo.empty()) {
 						Event infoReceived;
-						PacketType command = HELLO;
+						PacketType command = PacketType::LOGIN;
 						infoReceived = incomingInfo.front();
 						InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
 						imbs.Read(&command, commandBits);
 						switch (command) {
-						case PacketType::LOGIN: {
-							bool accepted=false;
+						case PacketType::LOGIN_OK: {
+							std::cout << "LoginOKRecibido\n";
 							logInAnswer = true;
-							imbs.Read(&accepted, boolBit);
-							if (accepted) {
-								programState = ProgramState::MAIN_MENU;
-								ResetValues(&selectedOption);
-							}
-							else {
-								std::cout << "Nombre de usuario y/o contraseña erroneos\n";
-							}
+							programState = ProgramState::MAIN_MENU;
+							ResetValues(&selectedOption);
 							break; 
 						}
-						case PacketType::REGISTER: {
+						case PacketType::LOGIN_NO: {
+							logInAnswer = true;
+							serverMessage = "Error de Log In";
+							break;
+						}
+						case PacketType::REGISTER_OK: {
 							bool accepted = false;
-							imbs.Read(&accepted, boolBit);
-							if (accepted) {
+							int aCriticalId=0;
+							//imbs.Read(&accepted, boolBit);
+							imbs.Read(&aCriticalId, criticalBits);
+							acks.push_back(aCriticalId);
+							//if (accepted) {
 								programState = ProgramState::MAIN_MENU;
 								ResetValues(&selectedOption);
-							}
-							else {
-								std::cout << "Error durante el registro\n";
-							}
+							//}
 							break; 
+						}
+						case PacketType::REGISTER_NO: {
+							serverMessage = "Error durante el registro";
+
+							break;
 						}
 						default:
 							break;
@@ -499,6 +503,23 @@ int main() {
 					window.draw(*LogInButton);
 					window.draw(*RegisterButton);
 
+					if (serverMessage.size() > 0) {
+						sf::Text serverTextRender;
+						serverTextRender.setFont(font);
+						serverTextRender.setCharacterSize(50);
+						serverTextRender.setString(serverMessage);
+						serverTextRender.setPosition(window.getSize().x / 4, window.getSize().y / 8);
+						serverTextRender.setFillColor(sf::Color::Black);
+
+						if (serverMessageClock.getElapsedTime().asMilliseconds() < 5000) {
+							window.draw(serverTextRender);
+						}
+						else {
+							serverMessage = "";
+							serverMessageClock.restart();
+						}
+					}
+
 
 					window.display();
 
@@ -580,7 +601,7 @@ int main() {
 
 					if (!incomingInfo.empty()) {
 						Event infoReceived;
-						PacketType command = HELLO;
+						PacketType command = PacketType::LOGIN;
 						infoReceived = incomingInfo.front();
 						InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
 						imbs.Read(&command, commandBits);
@@ -609,14 +630,21 @@ int main() {
 							}
 							break;
 
+						}case PacketType::REGISTER_OK: {
+							int aCriticalId = 0;
+							imbs.Read(&aCriticalId, criticalBits);
+							acks.push_back(aCriticalId);
+							break;
 						}
-						case PacketType::JOINGAME:{
-							bool aBool = false;
+						case PacketType::JOINGAME_OK:{
+							//int aCriticalID = 0;
+							//imbs.Read(&aCriticalID, criticalBits);
+
+							//acks.push_back(aCriticalID);
 
 								unsigned short aMatchPort = 0;
 								imbs.Read(&aMatchPort, portBits);
 								matchPort = aMatchPort;
-								//std::cout << "matchPort = " << matchPort;
 
 								int aSize = 0;
 								imbs.Read(&aSize, playerSizeBits);
@@ -643,8 +671,13 @@ int main() {
 
 							joinAnswer = true;
 							break;
-						}case PacketType::NOJOINGAME: {
+						}case PacketType::JOINGAME_NO: {
+							//int aCriticalID = 0;
+							//imbs.Read(&aCriticalID, criticalBits);
+
+							//acks.push_back(aCriticalID);
 							std::cout << "No puedes unirte a la partida\n";
+							serverMessage = "Error uniendose a partida\n";
 							joinAnswer = true;
 							break;
 						}
@@ -763,7 +796,7 @@ int main() {
 									if (y >= rect3.getPosition().y&&y <= rect3.getPosition().y + rect3.getSize().y) {
 
 										OutputMemoryBitStream ombs;
-										ombs.Write(PacketType::DISCONNECT, commandBits);
+										ombs.Write(PacketType::UNLOG, commandBits);
 
 										status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
 
@@ -788,15 +821,17 @@ int main() {
 						}
 					}
 
-					if (!joinAnswer&&logInClock.getElapsedTime().asSeconds()>0.3f) {
+					if (!joinAnswer&&logInClock.getElapsedTime().asSeconds()>0.5f) {
 						logInClock.restart();
 						OutputMemoryBitStream ombs;
 						ombs.Write(PacketType::JOINGAME, commandBits);
 						ombs.Write(matchesInfo[selectedOption].matchId, matchBits);
+						std::cout << "Intentando unirse a partida\n";
 						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
 						if (status == sf::Socket::Error) {
 							std::cout << "Error mandando petición de unión a partida\n";
 						}
+						
 
 					}
 
@@ -840,7 +875,7 @@ int main() {
 
 					if (!incomingInfo.empty()) {
 						Event infoReceived;
-						PacketType command = HELLO;
+						PacketType command = PacketType::LOGIN;
 						infoReceived = incomingInfo.front();
 						InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
 						imbs.Read(&command, commandBits);
@@ -1090,7 +1125,7 @@ int main() {
 
 					if (!incomingInfo.empty()) {
 						Event infoReceived;
-						PacketType command = HELLO;
+						PacketType command = PacketType::LOGIN;
 						infoReceived = incomingInfo.front();
 						InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
 						imbs.Read(&command, commandBits);
@@ -1106,11 +1141,14 @@ int main() {
 
 							break;
 						}
-						case PacketType::WELCOME: {
+						/*case PacketType::WELCOME: {
 							clockForTheServer.restart();
 							int aCriticalId = 0;
 							int victoryScore = 0;
 							imbs.Read(&aCriticalId, criticalBits);
+							std::cout << "CRITICAL ID RECIBIDO " << aCriticalId << std::endl;
+
+
 							imbs.Read(&victoryScore, criticalBits);
 							if (!welcomed) {
 								std::cout << "RECIBIDO WELCOME EN SALA\n";
@@ -1167,6 +1205,69 @@ int main() {
 							}
 
 							break;
+							}*/
+						case GAMEINFO: {
+							clockForTheServer.restart();
+							myId = 0;
+							int aCriticalId = 0;
+							int aWinScore = 0;
+							int aSize = 0;
+							int myNewId = 0;
+							std::pair<short, short>someCoords = { 0,0 };
+							int anId = 0;
+
+
+							imbs.Read(&aCriticalId, criticalBits);
+							imbs.Read(&aWinScore, criticalBits);
+							imbs.Read(&myNewId, playerSizeBits);
+							imbs.Read(&aSize, playerSizeBits);
+	
+							myId = myNewId;
+
+							serverMessageClock.restart();
+							serverMessage = "WELCOME! \nSCORE " + std::to_string(aWinScore) + " GOALS TO WIN";
+
+							std::cout << "MyId = " << myId << std::endl;
+							std::cout << "size = " << aSize << std::endl;
+
+
+							for (int k = 0; k < aSize; k++) {
+
+
+								//std::cout << "Escribiendo idPlayer " << aMatches[i]->aClients[k]->GetMatchID() << std::endl;;
+								imbs.Read(&anId, playerSizeBits);
+								imbs.Read(&someCoords.first, coordsbits);
+								imbs.Read(&someCoords.second, coordsbits);
+
+								std::cout << "checking Player id = " << anId << std::endl;
+
+
+								Client* aClient = new Client();
+								aClient->matchId = anId;
+								aClient->position.first = someCoords.first;
+								aClient->position.second = someCoords.second;
+								if (aClient->matchId != myId&&myId >= 0) {
+									std::cout << "Recibiendo cliente preexistente con id " << aClient->matchId << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
+									if (aClient->matchId < 2) {
+										aClients.push_back(aClient);
+										sf::CircleShape playerRender(playerRadius);
+										playerRenders.push_back(playerRender);
+									}
+
+								}
+								else {
+									myCoordenates = aClient->position;
+									auxPosition = myCoordenates;
+									originalCoordenates = myCoordenates;
+									delete aClient;
+								}
+
+							}
+							connected = true;
+							acks.push_back(aCriticalId);
+
+							programState = ProgramState::MATCH;
+							break; 
 						}
 						case EXITROOM: {
 							//int aCriticalId = 0;
@@ -1176,6 +1277,14 @@ int main() {
 							ResetValues(&selectedOption);
 							programState = MAIN_MENU;
 							readyPressed = false;
+
+							OutputMemoryBitStream auxOmbs;
+							auxOmbs.Write(PacketType::UPDATEGAMELIST);
+							status = socket->send(auxOmbs.GetBufferPtr(), auxOmbs.GetByteLength(), serverIp, serverPort);
+
+							if (status == sf::Socket::Error) {
+								std::cout << "Error enviando UpdateGameList\n";
+							}
 							//acks.push_back(aCriticalId);
 							break; 
 						}
@@ -1334,6 +1443,7 @@ int main() {
 										if (status == sf::Socket::Error) {
 											std::cout << "Error enviando ready\n";
 										}
+
 									}
 								}
 							}
@@ -1384,7 +1494,7 @@ int main() {
 					Event inc;
 					inc = incomingInfo.front();
 					Event infoReceived;
-					PacketType command = HELLO;
+					PacketType command = PacketType::LOGIN;
 					infoReceived = incomingInfo.front();
 					InputMemoryBitStream imbs(infoReceived.message, infoReceived.messageSize * 8);
 					imbs.Read(&command, commandBits);
@@ -1399,14 +1509,17 @@ int main() {
 					//Client* aClient = nullptr;
 					int anIndex = 0;
 					switch (command) {
-					case PacketType::WELCOME: {
-						if (!welcomed) {
+					/*case PacketType::WELCOME: {
+						aClients.clear();
+						playerRenders.clear();
+						//if (!welcomed) {
 							int victoryScore = 0;
 							std::cout << "RECIBIDO WELCOME EN PARTIDA\n";
 
 							welcomed = true;
 							serverMessageClock.restart();
 							imbs.Read(&aCriticalId, criticalBits);
+
 							imbs.Read(&victoryScore, criticalBits);
 
 							serverMessage = "WELCOME! \nSCORE " + std::to_string(victoryScore) + " GOALS TO WIN";
@@ -1453,12 +1566,73 @@ int main() {
 
 							connected = true;
 							std::cout << "MY ID IS " << myId << std::endl;
-						}
+						//}
+						//else {
+
+						//}
 						break; 
+					}*/
+					case GAMEINFO: {
+						clockForTheServer.restart();
+						myId = 0;
+						int aCriticalId = 0;
+						int aWinScore = 0;
+						int aSize = 0;
+						int myNewId = 0;
+						std::pair<short, short>someCoords = { 0,0 };
+						int anId = 0;
+
+
+						imbs.Read(&aCriticalId, criticalBits);
+						imbs.Read(&aWinScore, criticalBits);
+						imbs.Read(&myNewId, playerSizeBits);
+						imbs.Read(&aSize, playerSizeBits);
+
+						myId = myNewId;
+
+						serverMessageClock.restart();
+						serverMessage = "WELCOME! \nSCORE " + std::to_string(aWinScore) + " GOALS TO WIN";
+
+						for (int k = 0; k < aSize; k++) {
+
+
+							//std::cout << "Escribiendo idPlayer " << aMatches[i]->aClients[k]->GetMatchID() << std::endl;;
+							imbs.Read(&anId, playerSizeBits);
+							imbs.Read(&someCoords.first, coordsbits);
+							imbs.Read(&someCoords.second, coordsbits);
+
+							Client* aClient = new Client();
+							aClient->matchId = anId;
+							aClient->position.first = someCoords.first;
+							aClient->position.second = someCoords.second;
+
+							if (aClient->matchId != myId&&myId >= 0) {
+								std::cout << "Recibiendo cliente preexistente con id " << aClient->matchId << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
+								if (aClient->matchId < 2) {
+									aClients.push_back(aClient);
+									sf::CircleShape playerRender(playerRadius);
+									playerRenders.push_back(playerRender);
+								}
+
+							}
+							else {
+								myCoordenates = aClient->position;
+								auxPosition = myCoordenates;
+								originalCoordenates = myCoordenates;
+								delete aClient;
+							}
+
+						}
+						connected = true;
+						acks.push_back(aCriticalId);
+
+						programState = ProgramState::MATCH;
+						break;
 					}
 					case PacketType::PING:
 						ombs.Write(PacketType::ACKPING, commandBits);
 						socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
+						socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
 						clockForTheServer.restart();
 						break;
 
@@ -1504,15 +1678,13 @@ int main() {
 							aClients.erase(aClients.begin() + anIndex);
 							playerRenders.erase(playerRenders.begin() + anIndex);
 							std::cout << "Player " << aPlayerId << " Disconnected\n";
-
+							gameOver = true;
 						}
 						else {
 							std::cout << "Trying to disconnect non existing player with id " << aPlayerId << std::endl;
+							gameOver = true;
+
 						}
-						break;
-					case PacketType::NOTWELCOME:
-						std::cout << "SERVER FULL\n";
-						end = true;
 						break;
 					case PacketType::MOVEBALL:
 						imbs.Read(&someCoords.first, coordsbits);
@@ -1559,7 +1731,6 @@ int main() {
 						}
 						break;
 					case PacketType::ACKMOVE: {
-
 						imbs.Read(&aPlayerId, playerSizeBits);
 						imbs.Read(&aCriticalId, criticalBits); //Se lee aCriticalId pero en realidad es el ID del MOVIMIENTO
 						imbs.Read(&someCoords.first, coordsbits);
@@ -1571,6 +1742,9 @@ int main() {
 																	 //aClient->position = someCoords;
 
 																	 //std::cout << "Recibido ACKMOVE de jugador con ID " << aPlayerId << "Sus coordenadas son " << someCoords.first <<", "<<someCoords.second<< std::endl;
+
+							std::cout << "OTHERPLAYERMOIN\n";
+
 
 							std::pair<float, float>distance;
 							std::pair <short, short>lastPosition;
@@ -1610,6 +1784,8 @@ int main() {
 
 						}
 						else if (aPlayerId == myId) {
+							
+							std::cout << "My Id is "<< myId<<"receiving id "<<aPlayerId<<"\n";
 							int ackIndex = 0;
 							if (!CheckValidMoveId(&nonAckMoves, aCriticalId, someCoords, &ackIndex)) {
 								myCoordenates = someCoords;
@@ -1622,6 +1798,54 @@ int main() {
 								EraseAccums(&nonAckMoves, ackIndex);
 								//std::cout << "NonAckMoves-> " << nonAckMoves.size() << std::endl;
 							}
+						}else{
+							/////////////////////////////////////////////////////
+							std::cout << "NEW CLIENT with id " << aPlayerId << " but my Id is "<<myId<<"\n";
+							aClient = new Client();
+							aClient->matchId = aPlayerId;
+							aClient->position.first = someCoords.first;
+							aClient->position.second = someCoords.first;
+
+							aClients.push_back(aClient);
+
+							sf::CircleShape playerRender(playerRadius);
+
+							playerRenders.push_back(playerRender);
+
+							std::pair<float, float>distance;
+							std::pair <short, short>lastPosition;
+							if (aClient->steps.size() > 0) {
+								lastPosition = aClient->steps.back();
+							}
+							else {
+								lastPosition = aClient->position;
+							}
+
+
+
+							distance.first = (someCoords.first - lastPosition.first);
+							distance.second = someCoords.second - lastPosition.second;
+							distance.first /= subdividedSteps;
+							distance.second /= subdividedSteps;
+							//std::cout << "someCoords -> " << someCoords.first << ", " << someCoords.second << " - lastPosition "<<lastPosition.first << ", " << lastPosition.second <<"\n";
+
+
+							for (int i = 0; i < subdividedSteps; i++) {
+								std::pair<short, short>aStep;
+								aStep.first = lastPosition.first + (short)std::floor(distance.first*i);
+								aStep.second = lastPosition.second + (short)std::floor(distance.second*i);
+
+								if (aStep.first != lastPosition.first || aStep.second != lastPosition.second) {
+
+									//std::cout << std::floor(distance.first*i)<<"\n";
+									aClient->steps.push(aStep);
+									std::cout << "Pushing step with coords-> " << aStep.first << ", " << aStep.second << "\n";
+
+								}
+							}
+
+
+
 						}
 
 						//std::cout << "Recibida posicion de jugador con ID " <<aPlayerId<< ".Sus coordenadas son "<<someCoords.first<<", "<<someCoords.second<<"\n";
@@ -1900,6 +2124,7 @@ int main() {
 						if (clockGameOver.getElapsedTime().asSeconds() > 5) {
 							//end = true;
 							joinAnswer = true;
+							matchPort = 0;
 							programState = MAIN_MENU;
 							myId = 0;
 							welcomed = false;
@@ -1938,8 +2163,16 @@ int main() {
 				OutputMemoryBitStream ombs;
 				ombs.Write(PacketType::ACK, commandBits);
 				ombs.Write(acks[i], criticalBits);
-				std::cout << "Sending ack " << acks[i] << std::endl;
-				socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
+				if (matchPort > 0) {
+					socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, matchPort);
+					std::cout << "Sending ack to Match " << acks[i] << std::endl;
+
+				}
+				else {
+					socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
+					std::cout << "Sending ack to Server " << acks[i] << std::endl;
+
+				}
 			}
 			acks.clear();
 		}

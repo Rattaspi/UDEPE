@@ -116,7 +116,7 @@ private:
 	std::vector<CriticalMessage> criticalVector; //POR ALGUNA RAZON NO PUEDO ACCEDER A ESTE VECTOR
 public:
 	//Match* inGame;
-	
+	bool inGame;
 	std::vector<AccumMoveServer> acumulatedMoves;
 	sf::Clock moveClock;
 	sf::Clock shootClock;

@@ -25,7 +25,7 @@ void DrawScores(std::string localScoreLeft, std::string localScoreRight, std::st
 
 void LogIn(sf::UdpSocket* socket, std::string user, std::string password, sf::IpAddress, unsigned short port);
 
-void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword, sf::IpAddress ip, unsigned short port);
+void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword, sf::IpAddress ip, unsigned short port,std::string*, sf::Clock* );
 
 void ResetValues(int* selectedOption);
 
@@ -53,7 +53,48 @@ public:
 		connectedPlayers = 0;
 	}
 
+
+	//bool operator () (MatchInfo i, MatchInfo j, int sortMode) { 
+	//	switch (sortMode)
+	//	{
+	//	case 0:
+	//		return i.connectedPlayers < j.connectedPlayers;
+	//		break;
+	//	case 1: {
+	//		for (int k = 0; k < i.gameName.size(); k++) {
+	//			if (j.gameName.size() > k) {
+	//				if (i.gameName[k] != j.gameName[k]) {
+	//					std::string::size_type sz;   // alias of size_t
+	//					return i.gameName[k] < j.gameName[k];
+	//				}
+	//			}
+	//		}
+	//		return (i.gameName.size() < j.gameName.size());
+	//	
+	//		break;
+	//	}
+	//	default:
+	//		break;
+	//	}
+	//}
+
 };
+
+bool SortByNames(MatchInfo i, MatchInfo j) {
+	for (int k = 0; k < i.gameName.size(); k++) {
+		if (j.gameName.size() > k) {
+			if (i.gameName[k] != j.gameName[k]) {
+				std::string::size_type sz;   // alias of size_t
+				return i.gameName[k] < j.gameName[k];
+			}
+		}
+	}
+	return (i.gameName.size() < j.gameName.size());
+}
+
+bool SortByPlayers(MatchInfo i, MatchInfo j) {
+	return i.connectedPlayers < j.connectedPlayers;
+}
 
 class MatchDetailedInfo :public MatchInfo{
 	std::vector<Client>clients;
@@ -93,6 +134,7 @@ int main() {
 	std::pair<short, short>localBallCoords{ windowWidth/2,windowHeight/2 };
 	std::vector<AccumMove> nonAckMoves;
 	int currentMoveId=0;
+	int currentMatchPlayerSize = 0;
 	bool gameStart=false;
 	bool end = false; //finalizar programa
 	bool serverOnline = false;
@@ -120,7 +162,9 @@ int main() {
 	sf::RenderWindow window(sf::VideoMode(windowWidth, windowHeight), "Cliente con ID "+myId);
 	std::vector<sf::CircleShape> playerRenders;
 	enum ProgramState { SERVERCHECK, LOGIN, MAIN_MENU,JOIN_MATCH, MATCH_CREATION, MATCH_PASS,MATCH_ROOM,MATCH };
+	enum FilterMode{NONE,ALPHABETICAL,NUMPLAYERS};
 	ProgramState programState = LOGIN;
+	FilterMode filterMode = ALPHABETICAL;
 
 	std::string myUsername="";
 	std::string myPassword="";
@@ -129,7 +173,7 @@ int main() {
 	std::string myConfirmedPassword = "";
 
 	std::string roomName = "";
-	std::string roomPass = "";
+	std::string gamePlayersNum = "";
 	std::string goalsNumber = "";
 	std::vector<std::string>aRoomNames;
 	std::string myMessage = "";
@@ -219,7 +263,8 @@ int main() {
 						}
 						case PacketType::LOGIN_NO: {
 							logInAnswer = true;
-							serverMessage = "Error de Log In";
+							serverMessageClock.restart();
+							serverMessage = "Contraseña/Usuario incorrectos";
 							break;
 						}
 						case PacketType::REGISTER_OK: {
@@ -235,8 +280,8 @@ int main() {
 							break; 
 						}
 						case PacketType::REGISTER_NO: {
+							serverMessageClock.restart();
 							serverMessage = "Error durante el registro";
-
 							break;
 						}
 						default:
@@ -294,16 +339,24 @@ int main() {
 								}
 								if (x >= 60 && x <= (60 + 300)) {
 									if (y >= 600 && y <= (600 + 45)) {
-										logInAnswer = false;
+										if (myUsername.size() > 0 && myPassword.size() > 0) {
+											logInAnswer = false;
+										}
+										else {
+											serverMessageClock.restart();
+											serverMessage = "Hay que rellenar los espacios";
+										}
 									}
 								}
 								if (x >= 480 && x <= (480 + 300)) {
 									if (y >= 600 && y <= (600 + 45)) {
 										if (myRegisteredPassword.size() > 0 && myRegisteredUsername.size() > 0 && myConfirmedPassword.size() > 0) {
-											Register(socket, myRegisteredUsername, myRegisteredPassword, myConfirmedPassword, serverIp, serverPort);
+											Register(socket, myRegisteredUsername, myRegisteredPassword, myConfirmedPassword, serverIp, serverPort,&serverMessage,&serverMessageClock);
 										}
 										else {
-											std::cout << "Falta introducir agun dato\n";
+											//std::cout << "Falta introducir agun dato\n";
+											serverMessageClock.restart();
+											serverMessage = "Hay que rellenar los espacios";
 										}
 									}
 								}
@@ -321,14 +374,22 @@ int main() {
 							}
 							else if (evento.key.code == sf::Keyboard::Return) {
 								if (selectedOption == 0 || selectedOption == 1) {
-									logInAnswer = false;
+									if (myUsername.size() > 0 && myPassword.size() > 0) {
+										logInAnswer = false;
+									}
+									else {
+										serverMessageClock.restart();
+										serverMessage = "Hay que rellenar los espacios";
+									}
 								}
 								else {
 									if (myRegisteredPassword.size() > 0 && myRegisteredUsername.size() > 0 && myConfirmedPassword.size() > 0) {
-										Register(socket, myRegisteredUsername, myRegisteredPassword, myConfirmedPassword, serverIp, serverPort);
+										Register(socket, myRegisteredUsername, myRegisteredPassword, myConfirmedPassword, serverIp, serverPort,&serverMessage,&serverMessageClock);
 									}
 									else {
-										std::cout << "Falta introducir agun dato\n";
+										//std::cout << "Falta introducir agun dato\n";
+										serverMessageClock.restart();
+										serverMessage = "Hay que rellenar los espacios";
 									}
 								}
 							}
@@ -508,8 +569,8 @@ int main() {
 						serverTextRender.setFont(font);
 						serverTextRender.setCharacterSize(50);
 						serverTextRender.setString(serverMessage);
-						serverTextRender.setPosition(window.getSize().x / 4, window.getSize().y / 8);
-						serverTextRender.setFillColor(sf::Color::Black);
+						serverTextRender.setPosition(window.getSize().x / 4, window.getSize().y / 24);
+						serverTextRender.setFillColor(sf::Color::White);
 
 						if (serverMessageClock.getElapsedTime().asMilliseconds() < 5000) {
 							window.draw(serverTextRender);
@@ -550,35 +611,74 @@ int main() {
 				headerText2.setPosition(windowWidth - 200, 15);
 				headerText2.setFillColor(sf::Color::White);
 
+
+
+				sf::RectangleShape rect5(sf::Vector2f( 200, 60));
+				rect5.setPosition(200, 0 + rect5.getSize().y);
+				rect5.setFillColor(sf::Color::Blue);
+
+				sf::RectangleShape rect6(sf::Vector2f( 200, 60));
+				rect6.setPosition(400, 0 + rect6.getSize().y);
+				rect6.setFillColor(sf::Color::Magenta);
+
+				sf::RectangleShape rect7(sf::Vector2f( 200, 60));
+				rect7.setPosition(600, 0 + rect7.getSize().y);
+				rect7.setFillColor(sf::Color::Blue);
+
+
+				sf::Text headerText5("No filtrar", font, 20);
+				headerText5.setPosition(220, rect5.getSize().y+20);
+				headerText5.setFillColor(sf::Color::White);
+
+				sf::Text headerText6("Nombre", font, 20);
+				headerText6.setPosition(420, rect6.getSize().y+20);
+				headerText6.setFillColor(sf::Color::White);
+
+				sf::Text headerText7("N. Jugadores", font, 20);
+				headerText7.setPosition(620, rect7.getSize().y+20);
+				headerText7.setFillColor(sf::Color::White);
+
 				if (selectedOption > matchesInfo.size()) {
 					selectedOption = matchesInfo.size() - 1;
 				}
 
 				if (matchesInfo.size() > 0) {
-					for (int i = 0; i < matchesInfo.size(); i++) {
-						sf::RectangleShape aRect(sf::Vector2f(windowWidth-200,100));
-						aRect.setPosition(100, 0 + aRect.getSize().y*(i + 1));
-						sf::Text aGameName(matchesInfo[i].gameName, font, 30);
-						aGameName.setPosition(aRect.getPosition().x + 15, aRect.getPosition().y + 15);
-						sf::Text aPlayerText(std::to_string(matchesInfo[i].connectedPlayers) + "/" + std::to_string(matchesInfo[i].maxPlayers), font, 30);
-						aPlayerText.setPosition(windowWidth - 200, aRect.getPosition().y + 15);
+					if (filterMode == NONE) {
 
-						if (selectedOption == i) {
-							aRect.setFillColor(sf::Color::Yellow);
-							aGameName.setFillColor(sf::Color::Black);
-							aPlayerText.setFillColor(sf::Color::Black);
-						}
-						else {
-							aRect.setFillColor(sf::Color::Green);
-							aGameName.setFillColor(sf::Color::White);
-							aPlayerText.setFillColor(sf::Color::White);
-
-
-						}
-						rectangleShapes.push_back(aRect);
-						matchNames.push_back(aGameName);
-						playersText.push_back(aPlayerText);
 					}
+					else if(filterMode==ALPHABETICAL){
+						std::sort(matchesInfo.begin(), matchesInfo.end(), SortByNames);
+
+					}
+					else if (filterMode == NUMPLAYERS) {
+						std::sort(matchesInfo.begin(), matchesInfo.end(), SortByPlayers);
+
+					}
+				}
+
+				for (int i = 0; i < matchesInfo.size(); i++) {
+					sf::RectangleShape aRect(sf::Vector2f(windowWidth - 200, 50));
+					aRect.setPosition(100, 0 + aRect.getSize().y*(i + 3));
+					sf::Text aGameName(matchesInfo[i].gameName, font, 30);
+					aGameName.setPosition(aRect.getPosition().x + 15, aRect.getPosition().y + 10);
+					sf::Text aPlayerText(std::to_string(matchesInfo[i].connectedPlayers) + "/" + std::to_string(matchesInfo[i].maxPlayers), font, 30);
+					aPlayerText.setPosition(windowWidth - 200, aRect.getPosition().y + 15);
+
+					if (selectedOption == i) {
+						aRect.setFillColor(sf::Color::Yellow);
+						aGameName.setFillColor(sf::Color::Black);
+						aPlayerText.setFillColor(sf::Color::Black);
+					}
+					else {
+						aRect.setFillColor(sf::Color::Green);
+						aGameName.setFillColor(sf::Color::White);
+						aPlayerText.setFillColor(sf::Color::White);
+
+
+					}
+					rectangleShapes.push_back(aRect);
+					matchNames.push_back(aGameName);
+					playersText.push_back(aPlayerText);
 				}
 
 				if (window.isOpen()) {
@@ -616,13 +716,13 @@ int main() {
 								int someClientSize = 0;
 								int anId = 0;
 								std::string someName = "";
-
+								int someMaxSize = 0;
 								imbs.Read(&someClientSize, playerSizeBits);
 								imbs.Read(&anId, matchBits);
 								imbs.ReadString(&someName);
-
-								MatchInfo matchInfo(anId, someName, 4, someClientSize);
-
+								imbs.Read(&someMaxSize, playerSizeBits);
+								MatchInfo matchInfo(anId, someName, someMaxSize, someClientSize);
+								
 								std::cout << "Recibida sala con nombre" << someName << std::endl;
 
 								matchesInfo.push_back(matchInfo);
@@ -677,7 +777,7 @@ int main() {
 
 							//acks.push_back(aCriticalID);
 							std::cout << "No puedes unirte a la partida\n";
-							serverMessage = "Error uniendose a partida\n";
+							//serverMessage = "Error uniendose a partida\n";
 							joinAnswer = true;
 							break;
 						}
@@ -812,6 +912,16 @@ int main() {
 										//std::cout << "DISCONNECT\n";
 									}
 								}
+								if (y >= rect5.getPosition().y&&y <= rect5.getPosition().y + rect5.getSize().y) {
+									if (x >= rect5.getPosition().x&&x <= rect5.getPosition().x + rect5.getSize().x) {
+										filterMode = NONE;
+									}else if (x >= rect6.getPosition().x&&x <= rect6.getPosition().x + rect6.getSize().x) {
+										filterMode = ALPHABETICAL;
+									}else if (x >= rect7.getPosition().x&&x <= rect7.getPosition().x + rect7.getSize().x) {
+										filterMode = NUMPLAYERS;
+									}
+								}
+	
 
 
 
@@ -820,20 +930,37 @@ int main() {
 							break;
 						}
 					}
-
+					
 					if (!joinAnswer&&logInClock.getElapsedTime().asSeconds()>0.5f) {
 						logInClock.restart();
 						OutputMemoryBitStream ombs;
 						ombs.Write(PacketType::JOINGAME, commandBits);
 						ombs.Write(matchesInfo[selectedOption].matchId, matchBits);
+						currentMatchPlayerSize = matchesInfo[selectedOption].maxPlayers;
 						std::cout << "Intentando unirse a partida\n";
 						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
 						if (status == sf::Socket::Error) {
 							std::cout << "Error mandando petición de unión a partida\n";
 						}
-						
-
 					}
+
+					if (serverMessage.size() > 0) {
+						sf::Text serverTextRender;
+						serverTextRender.setFont(font);
+						serverTextRender.setCharacterSize(50);
+						serverTextRender.setString(serverMessage);
+						serverTextRender.setPosition(window.getSize().x / 4, window.getSize().y / 24);
+						serverTextRender.setFillColor(sf::Color::White);
+
+						if (serverMessageClock.getElapsedTime().asMilliseconds() < 5000) {
+							window.draw(serverTextRender);
+						}
+						else {
+							serverMessage = "";
+							serverMessageClock.restart();
+						}
+					}
+
 
 					window.draw(rect3);
 					window.draw(rect1);
@@ -844,6 +971,16 @@ int main() {
 
 					window.draw(headerText1);
 					window.draw(headerText2);
+
+					window.draw(rect5);
+					window.draw(rect6);
+					window.draw(rect7);
+
+					window.draw(headerText5);
+					window.draw(headerText6);
+					window.draw(headerText7);
+		
+
 
 					if (rectangleShapes.size() > 0) {
 						for (int i = 0; i < matchesInfo.size(); i++) {
@@ -899,6 +1036,9 @@ int main() {
 
 							if (anAnswer) {
 								programState = ProgramState::MAIN_MENU;
+								roomName = "";
+								gamePlayersNum = "";
+								goalsNumber = "";
 								ResetValues(&selectedOption);
 							}else{
 
@@ -938,11 +1078,11 @@ int main() {
 					passRect.setPosition(windowWidth / 2 - passRect.getSize().x / 2, 50+(windowHeight / 8)*2 - passRect.getSize().y / 2);
 					passRect.setFillColor(sf::Color::Green);
 
-					sf::Text passText("Contraseña",font,30);
+					sf::Text passText("Número de jugadores",font,30);
 					passText.setFillColor(sf::Color::White);
 					passText.setPosition(sf::Vector2f(passRect.getPosition().x + 20, passRect.getPosition().y - 60));
 
-					sf::Text passTextHeader(roomPass, font, 30);
+					sf::Text passTextHeader(gamePlayersNum, font, 30);
 					passTextHeader.setFillColor(sf::Color::White);
 					passTextHeader.setPosition(sf::Vector2f(passRect.getPosition().x + 50, passRect.getPosition().y ));
 
@@ -995,7 +1135,7 @@ int main() {
 									roomName = roomName.substr(0, roomName.size() - 1);
 									break;
 								case 1:
-									roomPass = roomPass.substr(0, roomPass.size() - 1);
+									gamePlayersNum = gamePlayersNum.substr(0, gamePlayersNum.size() - 1);
 									break;
 								case 2:
 									goalsNumber = goalsNumber.substr(0, goalsNumber.size() - 1);
@@ -1008,6 +1148,16 @@ int main() {
 								selectedOption++;
 								selectedOption = selectedOption % 3;
 							}
+							else if (evento.key.code == sf::Keyboard::Return) {
+								if (roomName.size() > 0 && goalsNumber.size()>0 && gamePlayersNum.size()>0) {
+									//programState = MATCH_ROOM;
+									joinAnswer = false;
+									ResetValues(&selectedOption);
+								}
+								else {
+									serverMessage = "Hay que rellenar todos los espacios";
+								}
+							}
 							break;
 						case sf::Event::TextEntered:
 							if (evento.text.unicode >= 32 && evento.text.unicode <= 126) {
@@ -1018,8 +1168,12 @@ int main() {
 									}
 									break;
 								case 1:
-									if (roomPass.size() < 20) {
-										roomPass += (char)evento.text.unicode;
+									if (gamePlayersNum.size() < 20) {
+										if (evento.text.unicode >= 48 && evento.text.unicode <= 57) {
+											if (gamePlayersNum.size() < 5) {
+												gamePlayersNum += (char)evento.text.unicode;
+											}
+										}
 									}
 									break;
 								case 2:
@@ -1055,15 +1209,22 @@ int main() {
 								if (y >= cancelRect.getPosition().y&&y <= cancelRect.getPosition().y+cancelRect.getSize().y) {
 									if (x >= cancelRect.getPosition().x&&x <= cancelRect.getPosition().x + cancelRect.getSize().x) {
 										 roomName = "";
-										 roomPass = "";
+										 gamePlayersNum = "";
 										 goalsNumber = "";
 										 programState = MAIN_MENU;
 										 ResetValues(&selectedOption);
 									}
 									else if (x >= createRect.getPosition().x&&x <= createRect.getPosition().x + createRect.getSize().x) {
-										//programState = MATCH_ROOM;
-										joinAnswer = false;
-										ResetValues(&selectedOption);
+										if (roomName.size() > 0&&goalsNumber.size()>0&&gamePlayersNum.size()>0) {
+											//programState = MATCH_ROOM;
+											joinAnswer = false;
+											ResetValues(&selectedOption);
+										}
+										else {
+											serverMessage = "Hay que rellenar todos los espacios";
+											serverMessageClock.restart();
+
+										}
 									}
 								}
 
@@ -1078,15 +1239,22 @@ int main() {
 						OutputMemoryBitStream ombs;
 						ombs.Write(PacketType::CREATEGAME, commandBits);
 						ombs.WriteString(roomName);
-						ombs.WriteString(roomPass);
+						//ombs.WriteString(gamePlayersNum);
 						std::string::size_type sz;   // alias of size_t
-
+						int players = std::stoi(gamePlayersNum, &sz);
 						int goals = std::stoi(goalsNumber, &sz);
+
+						if (players > 4) {
+							players = 4;
+						}
+						else if (players < 2) {
+							players = 2;
+						}
 
 						if (goals > 30) {
 							goals = 30;
 						}
-
+						ombs.Write(players,playerSizeBits);
 						ombs.Write(goals, commandBits);
 
 						status = socket->send(ombs.GetBufferPtr(), ombs.GetByteLength(), serverIp, serverPort);
@@ -1114,6 +1282,24 @@ int main() {
 
 					window.draw(createRect);
 					window.draw(createText);
+
+					if (serverMessage.size() > 0) {
+						sf::Text serverTextRender;
+						serverTextRender.setFont(font);
+						serverTextRender.setCharacterSize(50);
+						serverTextRender.setString(serverMessage);
+						serverTextRender.setPosition(window.getSize().x / 6, window.getSize().y / 8);
+						serverTextRender.setFillColor(sf::Color::White);
+
+						if (serverMessageClock.getElapsedTime().asMilliseconds() < 5000) {
+							window.draw(serverTextRender);
+						}
+						else {
+							serverMessage = "";
+							serverMessageClock.restart();
+						}
+					}
+
 
 					window.display();
 				}
@@ -1248,7 +1434,7 @@ int main() {
 								aClient->position.second = someCoords.second;
 								if (aClient->matchId != myId&&myId >= 0) {
 									std::cout << "Recibiendo cliente preexistente con id " << aClient->matchId << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
-									if (aClient->matchId < 2) {
+									if (aClient->matchId < currentMatchPlayerSize) {
 										aClients.push_back(aClient);
 										sf::CircleShape playerRender(playerRadius);
 										playerRenders.push_back(playerRender);
@@ -1608,7 +1794,7 @@ int main() {
 
 							if (aClient->matchId != myId&&myId >= 0) {
 								std::cout << "Recibiendo cliente preexistente con id " << aClient->matchId << " y coordenadas " << aClient->position.first << "," << aClient->position.second << std::endl;
-								if (aClient->matchId < 2) {
+								if (aClient->matchId < currentMatchPlayerSize) {
 									aClients.push_back(aClient);
 									sf::CircleShape playerRender(playerRadius);
 									playerRenders.push_back(playerRender);
@@ -2002,7 +2188,7 @@ int main() {
 
 						int indexToDelete = -1;
 						for (int i = 0; i < aClients.size(); i++) {
-							if (aClients[i]->matchId > 2) {
+							if (aClients[i]->matchId > currentMatchPlayerSize -1) {
 								if (indexToDelete == -1) {
 									indexToDelete = i;
 								}
@@ -2359,7 +2545,7 @@ void LogIn(sf::UdpSocket* socket, std::string user, std::string password,sf::IpA
 	}
 }
 
-void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword,sf::IpAddress ip, unsigned short port) {
+void Register(sf::UdpSocket* socket, std::string user, std::string password, std::string confirmedPassword,sf::IpAddress ip, unsigned short port, std::string* serverText,sf::Clock* relojServer ) {
 	sf::Socket::Status status;
 	if (confirmedPassword == password) {
 
@@ -2376,7 +2562,8 @@ void Register(sf::UdpSocket* socket, std::string user, std::string password, std
 	}
 	else {
 		std::cout << "Passwords do not match";// with UserName " + user + " and password " + password + "\n";
-
+		*serverText = "Las contraseñas deben coincidir";
+		relojServer->restart();
 	}
 }
 

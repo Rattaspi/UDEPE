@@ -15,6 +15,7 @@ public:
 class Match {
 
 public:
+	int playerLimit;
 	int matchId;
 	std::string gameName;
 	sf::Clock criticalClock;

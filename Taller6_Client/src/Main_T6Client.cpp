@@ -615,16 +615,29 @@ int main() {
 
 				sf::RectangleShape rect5(sf::Vector2f( 200, 60));
 				rect5.setPosition(200, 0 + rect5.getSize().y);
-				rect5.setFillColor(sf::Color::Blue);
 
+				if (filterMode == NONE) {
+					rect5.setFillColor(sf::Color::Green);
+				}else {
+					rect5.setFillColor(sf::Color::Blue);
+				}
 				sf::RectangleShape rect6(sf::Vector2f( 200, 60));
 				rect6.setPosition(400, 0 + rect6.getSize().y);
-				rect6.setFillColor(sf::Color::Magenta);
 
+				if (filterMode == ALPHABETICAL) {
+					rect6.setFillColor(sf::Color::Green);
+				}else{
+				rect6.setFillColor(sf::Color(0,200,255));
+				}
 				sf::RectangleShape rect7(sf::Vector2f( 200, 60));
 				rect7.setPosition(600, 0 + rect7.getSize().y);
-				rect7.setFillColor(sf::Color::Blue);
 
+
+				if (filterMode == NUMPLAYERS) {
+					rect7.setFillColor(sf::Color::Green);
+				}else {
+					rect7.setFillColor(sf::Color::Blue);
+				}
 
 				sf::Text headerText5("No filtrar", font, 20);
 				headerText5.setPosition(220, rect5.getSize().y+20);
@@ -665,16 +678,20 @@ int main() {
 					aPlayerText.setPosition(windowWidth - 200, aRect.getPosition().y + 15);
 
 					if (selectedOption == i) {
-						aRect.setFillColor(sf::Color::Yellow);
+						aRect.setFillColor(sf::Color::Green);
 						aGameName.setFillColor(sf::Color::Black);
 						aPlayerText.setFillColor(sf::Color::Black);
 					}
-					else {
-						aRect.setFillColor(sf::Color::Green);
-						aGameName.setFillColor(sf::Color::White);
-						aPlayerText.setFillColor(sf::Color::White);
+					else if(i%2==0){
+						aRect.setFillColor(sf::Color(255,255,0));
+						aGameName.setFillColor(sf::Color::Black);
+						aPlayerText.setFillColor(sf::Color::Black);
 
 
+					}else{
+						aRect.setFillColor(sf::Color(255,255,150));
+						aGameName.setFillColor(sf::Color::Black);
+						aPlayerText.setFillColor(sf::Color::Black);
 					}
 					rectangleShapes.push_back(aRect);
 					matchNames.push_back(aGameName);
@@ -872,11 +889,12 @@ int main() {
 
 								if (y >= rect1.getPosition().y && y <= rect1.getPosition().y + rect1.getSize().y) {
 									if (x >= rect1.getPosition().x && x <= rect1.getPosition().x + rect1.getSize().x) {
-										//selectedOption = 0;
-										myMatchId = matchesInfo[selectedOption].matchId;
-										//programState = MATCH_ROOM;
+										////selectedOption = 0;
+										//myMatchId = matchesInfo[selectedOption].matchId;
+										////programState = MATCH_ROOM;
 										aMsjs.clear();
-										ResetValues(&selectedOption);
+										//ResetValues(&selectedOption);
+										joinAnswer = false;
 
 									}
 									else if (x >= rect2.getPosition().x && x <= rect2.getPosition().x + rect2.getSize().x) {
